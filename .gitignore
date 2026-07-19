@@ -1,0 +1,13 @@
+# Scratch / fleet state (referenced by docs/agents/issue-tracker.md and the orch skill)
+.scratch/
+
+# Editor / OS junk
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
