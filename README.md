@@ -1,3 +1,3 @@
-# tmuxer
+# Agent Multiplexer
 
-A tmux-based orchestration skill for coding agents.
+A tmux-based orchestration tool/MCP server for coding agents.
