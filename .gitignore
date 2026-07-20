@@ -1,6 +1,9 @@
 # Scratch / fleet state (referenced by docs/agents/issue-tracker.md and the orch skill)
 .scratch/
 
+# Ephemeral agent worktrees (created by subagent isolation; never track)
+.claude/worktrees/
+
 # Editor / OS junk
 .DS_Store
 *.swp
