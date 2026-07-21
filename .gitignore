@@ -1,3 +1,10 @@
+# Dependencies
+node_modules/
+
+# Build / TypeScript artifacts
+dist/
+*.tsbuildinfo
+
 # Scratch / fleet state (referenced by docs/agents/issue-tracker.md and the orch skill)
 .scratch/
 
