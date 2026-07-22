@@ -11,6 +11,8 @@ import { provisionWorktree } from "./worktree.ts";
 
 const DEFAULT_AGENT_TYPE = "claude";
 
+type MuxTx = Parameters<Parameters<MuxDb["transaction"]>[0]>[0];
+
 export interface AssignDeps {
   readonly db: MuxDb;
   readonly tmux: TmuxExecutor;
@@ -46,10 +48,12 @@ export interface AssignResult {
  *
  * An existing name retasks instead: the same pane and worktree are reused via
  * `tmux respawn-pane -k` (a genuinely fresh process, not a carried-over
- * conversation), the worktree is re-synced against base first, and only a new
- * `assignments` row is written - the `crew` identity row (name, worktree,
- * branch) is unchanged, and the new assignment starts with an empty event
- * trail since events are scoped per-assignment.
+ * conversation), a worktree the crew already holds is re-synced against base
+ * first, and only a new `assignments` row is written - the `crew` identity
+ * row's name never changes, and its worktree/branch change only once, the
+ * first time a previously worktree-less crew is retasked with a
+ * file-mutating skill. The new assignment starts with an empty event trail
+ * since events are scoped per-assignment.
  */
 export async function assignCrew(deps: AssignDeps, input: AssignInput): Promise<AssignResult> {
   const { db, config } = deps;
@@ -101,27 +105,13 @@ async function spawnCrew(
       .values({ sessionKey, name, agentType, paneId, worktreePath, branch })
       .returning()
       .get();
-    const insertedAssignment = tx
-      .insert(assignments)
-      .values({
-        sessionKey,
-        crewId: insertedCrew.id,
-        skill: input.skill,
-        scope: input.scope,
-        agentType,
-        issue: input.issue ?? null,
-      })
-      .returning()
-      .get();
-
-    return {
+    return writeAssignment(tx, input, agentType, {
       crewId: insertedCrew.id,
-      assignmentId: insertedAssignment.id,
       name: insertedCrew.name,
-      agentType,
+      sessionKey,
       paneId,
       worktreePath: insertedCrew.worktreePath,
-    };
+    });
   });
 }
 
@@ -141,44 +131,80 @@ async function retaskCrew(
 
   // Re-sync the reused worktree against base before the new task; a crew that
   // had none (a prior read-only skill) gets one freshly provisioned instead.
+  // A read-only retask needs no worktree of its own, but a worktree the crew
+  // already holds is left in place - untouched, not recreated - for whenever
+  // it's next retasked with a file-mutating skill.
   const worktree = await provisionWorktree(worktreeDeps(deps), {
     sessionKey,
     crewName: existingCrew.name,
     skill: input.skill,
     existingWorktree: existingCrew.worktreePath ?? undefined,
   });
-  const worktreePath = worktree?.path ?? null;
-  const branch = worktree?.branch ?? null;
+  // What this launch runs in: the freshly (re)provisioned worktree, or none.
+  const launchWorktreePath = worktree?.path ?? null;
+  // What the crew identity row records: unchanged unless this call is the one
+  // that gives a previously worktree-less crew its first worktree.
+  const identityWorktreePath = worktree?.path ?? existingCrew.worktreePath;
+  const identityBranch = worktree?.branch ?? existingCrew.branch;
 
-  await launchAgent(deps, adapter, { crewName: existingCrew.name, paneId, worktreePath }, input);
+  await launchAgent(
+    deps,
+    adapter,
+    { crewName: existingCrew.name, paneId, worktreePath: launchWorktreePath },
+    input,
+  );
 
   return db.transaction((tx) => {
-    tx.update(crew)
-      .set({ agentType, worktreePath, branch })
-      .where(eq(crew.id, existingCrew.id))
-      .run();
-    const insertedAssignment = tx
-      .insert(assignments)
-      .values({
-        sessionKey,
-        crewId: existingCrew.id,
-        skill: input.skill,
-        scope: input.scope,
-        agentType,
-        issue: input.issue ?? null,
-      })
-      .returning()
-      .get();
-
-    return {
+    if (worktree) {
+      tx.update(crew)
+        .set({ worktreePath: identityWorktreePath, branch: identityBranch })
+        .where(eq(crew.id, existingCrew.id))
+        .run();
+    }
+    return writeAssignment(tx, input, agentType, {
       crewId: existingCrew.id,
-      assignmentId: insertedAssignment.id,
       name: existingCrew.name,
-      agentType,
+      sessionKey,
       paneId,
-      worktreePath,
-    };
+      worktreePath: identityWorktreePath,
+    });
   });
+}
+
+/** Insert the new `assignments` row and build the tool result common to spawn and retask. */
+function writeAssignment(
+  tx: MuxTx,
+  input: AssignInput,
+  agentType: string,
+  target: {
+    crewId: number;
+    name: string;
+    sessionKey: string;
+    paneId: string;
+    worktreePath: string | null;
+  },
+): AssignResult {
+  const insertedAssignment = tx
+    .insert(assignments)
+    .values({
+      sessionKey: target.sessionKey,
+      crewId: target.crewId,
+      skill: input.skill,
+      scope: input.scope,
+      agentType,
+      issue: input.issue ?? null,
+    })
+    .returning()
+    .get();
+
+  return {
+    crewId: target.crewId,
+    assignmentId: insertedAssignment.id,
+    name: target.name,
+    agentType,
+    paneId: target.paneId,
+    worktreePath: target.worktreePath,
+  };
 }
 
 function worktreeDeps(deps: AssignDeps) {
