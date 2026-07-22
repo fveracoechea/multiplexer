@@ -27,7 +27,8 @@ describe("streamable-HTTP transport", () => {
       serverPwd: "/tmp/mux",
     };
     const adapters = new Map([["claude", new ClaudeAdapter()]]);
-    const createServer = () => createMuxServer({ db, tmux, adapters, config });
+    const createServer = (connectedCrew?: string) =>
+      createMuxServer({ db, tmux, adapters, config, connectedCrew });
 
     http = await startHttpServer(createServer, { port: 0 });
     expect(http.url).toMatch(/^http:\/\/localhost:\d+$/);

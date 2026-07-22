@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { Adapter } from "./adapter/types.ts";
 import type { MuxConfig } from "./config.ts";
 import { assignCrew } from "./crew/assign.ts";
+import { appendReport, REPORT_STATUSES } from "./crew/report.ts";
+import { crewDetail, crewOverview } from "./crew/status.ts";
 import type { MuxDb } from "./db/index.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
 
@@ -12,6 +14,12 @@ export interface MuxServerDeps {
   readonly tmux: TmuxExecutor;
   readonly adapters: ReadonlyMap<string, Adapter>;
   readonly config: MuxConfig;
+  /**
+   * The crew this connection belongs to, bound to the MCP connection URL
+   * (ADR-0001); undefined for the orchestrator's session-scoped connection.
+   * Only a crew connection may `report`.
+   */
+  readonly connectedCrew?: string;
 }
 
 /**
@@ -60,6 +68,64 @@ export function createMuxServer(deps: MuxServerDeps): McpServer {
           { type: "text", text: JSON.stringify(result) },
         ],
       };
+    },
+  );
+
+  // Crew-facing: append a progress/milestone/blocked/done report to the calling
+  // crew's current assignment. The caller is identified by the connection.
+  server.registerTool(
+    "report",
+    {
+      title: "Report progress",
+      description:
+        "Append a progress, milestone, blocked, or done report against your current assignment. " +
+        "blocked is a hard halt awaiting a steer; done is terminal.",
+      inputSchema: {
+        summary: z.string().min(1).describe("Short human-readable progress summary."),
+        status: z.enum(REPORT_STATUSES).describe("progress | milestone | blocked | done."),
+        reportPath: z
+          .string()
+          .optional()
+          .describe("Free-form pointer to an artifact the skill produced, if any."),
+        prUrl: z.string().optional().describe("URL of an opened pull request, if any."),
+      },
+    },
+    (args) => {
+      if (!deps.connectedCrew) {
+        throw new Error("report is only callable by a crew agent");
+      }
+      const event = appendReport(deps, { connectedCrew: deps.connectedCrew, ...args });
+      return {
+        content: [
+          { type: "text", text: `Recorded ${event.status} report (event #${event.id}).` },
+          { type: "text", text: JSON.stringify(event) },
+        ],
+      };
+    },
+  );
+
+  // Orchestrator-facing: fleet overview (no name) or one crew's capped detail.
+  server.registerTool(
+    "crew_status",
+    {
+      title: "Crew status",
+      description:
+        "Without a name, a bounded overview of all crew in the session. With a name, that " +
+        "crew's detail capped to its most recent events.",
+      inputSchema: {
+        name: z.string().optional().describe("Crew name for detail; omit for the fleet overview."),
+      },
+    },
+    (args) => {
+      if (args.name) {
+        const detail = crewDetail(deps, args.name);
+        if (!detail) {
+          throw new Error(`unknown crew "${args.name}" in this session`);
+        }
+        return { content: [{ type: "text", text: JSON.stringify(detail) }] };
+      }
+      const overview = crewOverview(deps);
+      return { content: [{ type: "text", text: JSON.stringify(overview) }] };
     },
   );
 

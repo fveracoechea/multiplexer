@@ -74,7 +74,9 @@ export async function assignCrew(deps: AssignDeps, input: AssignInput): Promise<
     role: buildCrewRole(),
     initialPrompt: buildInitialPrompt(input.skill, input.scope),
     mcpServerName: config.mcpServerName,
-    mcpUrl: config.mcpUrl,
+    // Per-crew endpoint so the server can attribute this crew's reports to it
+    // without trusting a spoofable tool argument (ADR-0001).
+    mcpUrl: `${config.mcpUrl}/${name}`,
   });
   await tmux.run(["respawn-pane", "-k", "-t", paneId, ...launch]);
 
