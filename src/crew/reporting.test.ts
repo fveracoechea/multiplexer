@@ -68,7 +68,7 @@ describe("report + crew_status tool surface", () => {
   test("the tool surface has no way to read raw pane scrollback", async () => {
     const client = await connect(makeConfig("p"));
     const names = (await client.listTools()).tools.map((t) => t.name).sort();
-    expect(names).toEqual(["assign_crew", "crew_status", "report"]);
+    expect(names).toEqual(["assign_crew", "crew_status", "report", "steer_crew"]);
     // No capture-pane / scrollback tool exists (spec #11 anti-context-bloat).
     expect(names.some((n) => /capture|scrollback|pane/.test(n))).toBe(false);
   });
