@@ -91,4 +91,88 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
     const [respawn] = tmux.callsOf("respawn-pane");
     expect(respawn).not.toContain("-c");
   });
+
+  test("retasking an existing crew re-syncs its worktree instead of recreating it", async () => {
+    const client = await connect();
+    await client.callTool({
+      name: "assign_crew",
+      arguments: { name: "ripley", skill: "implement", scope: "build settings page" },
+    });
+
+    await client.callTool({
+      name: "assign_crew",
+      arguments: { name: "ripley", skill: "implement", scope: "build the next page" },
+    });
+
+    const row = crewRow("ripley");
+    // Identity (worktree path + branch) is unchanged across the retask.
+    expect(row?.worktreePath).toBe("/srv/.mux/worktrees/proj-a/ripley");
+    expect(row?.branch).toBe("mux/proj-a/ripley");
+
+    // Only one `worktree add`; the retask re-syncs (fetch + rebase) instead.
+    expect(git.callsOf("worktree")).toEqual([
+      ["worktree", "add", "-b", "mux/proj-a/ripley", "/srv/.mux/worktrees/proj-a/ripley", "main"],
+    ]);
+    expect(git.calls).toEqual([
+      ["worktree", "add", "-b", "mux/proj-a/ripley", "/srv/.mux/worktrees/proj-a/ripley", "main"],
+      ["-C", "/srv/.mux/worktrees/proj-a/ripley", "fetch", "origin", "main"],
+      ["-C", "/srv/.mux/worktrees/proj-a/ripley", "rebase", "FETCH_HEAD"],
+    ]);
+
+    // Both launches land in the same worktree; only one pane was ever created.
+    const respawns = tmux.callsOf("respawn-pane");
+    expect(respawns).toHaveLength(2);
+    for (const respawn of respawns) {
+      const cIndex = respawn.indexOf("-c");
+      expect(respawn[cIndex + 1]).toBe("/srv/.mux/worktrees/proj-a/ripley");
+    }
+    expect(tmux.callsOf("new-window")).toHaveLength(1);
+    expect(tmux.callsOf("split-window")).toHaveLength(0);
+  });
+
+  test("retasking with a read-only skill leaves a held worktree in place, not nulled", async () => {
+    const client = await connect();
+    await client.callTool({
+      name: "assign_crew",
+      arguments: { name: "ripley", skill: "implement", scope: "build settings page" },
+    });
+
+    // Retask with a read-only skill: no worktree needed for this task, but the
+    // crew's held worktree must not be dropped from its identity row.
+    await client.callTool({
+      name: "assign_crew",
+      arguments: { name: "ripley", skill: "research", scope: "survey the codebase" },
+    });
+
+    const row = crewRow("ripley");
+    expect(row?.worktreePath).toBe("/srv/.mux/worktrees/proj-a/ripley");
+    expect(row?.branch).toBe("mux/proj-a/ripley");
+
+    // The read-only retask ran no git and launched with no start dir.
+    expect(git.callsOf("worktree")).toHaveLength(1);
+    expect(git.callsOf("fetch")).toHaveLength(0);
+    const [, secondRespawn] = tmux.callsOf("respawn-pane");
+    expect(secondRespawn).not.toContain("-c");
+
+    // Retasking back to a file-mutating skill reuses (fetch + rebase) the held
+    // worktree rather than re-running `worktree add` against the same path.
+    await client.callTool({
+      name: "assign_crew",
+      arguments: { name: "ripley", skill: "implement", scope: "build the next page" },
+    });
+    expect(git.callsOf("worktree")).toHaveLength(1);
+    expect(git.calls.at(-2)).toEqual([
+      "-C",
+      "/srv/.mux/worktrees/proj-a/ripley",
+      "fetch",
+      "origin",
+      "main",
+    ]);
+    expect(git.calls.at(-1)).toEqual([
+      "-C",
+      "/srv/.mux/worktrees/proj-a/ripley",
+      "rebase",
+      "FETCH_HEAD",
+    ]);
+  });
 });
