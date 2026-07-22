@@ -8,6 +8,9 @@ dist/
 # Scratch / fleet state (referenced by docs/agents/issue-tracker.md and the orch skill)
 .scratch/
 
+# Server-owned state (SQLite DB, logs), rooted at the server's PWD
+.mux/
+
 # Ephemeral agent worktrees (created by subagent isolation; never track)
 .claude/worktrees/
 
