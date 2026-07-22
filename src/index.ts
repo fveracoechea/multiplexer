@@ -35,9 +35,10 @@ async function main(): Promise<void> {
   const git = new RealGitExecutor();
   const adapters = new Map([["claude", new ClaudeAdapter()]]);
 
-  const http = await startHttpServer(() => createMuxServer({ db, tmux, git, adapters, config }), {
-    port,
-  });
+  const http = await startHttpServer(
+    (connectedCrew) => createMuxServer({ db, tmux, git, adapters, config, connectedCrew }),
+    { port },
+  );
   console.log(`mux MCP server listening on ${http.mcpUrl} (session: ${sessionKey})`);
 }
 

@@ -29,7 +29,8 @@ describe("streamable-HTTP transport", () => {
     };
     const git = new FakeGitExecutor();
     const adapters = new Map([["claude", new ClaudeAdapter()]]);
-    const createServer = () => createMuxServer({ db, tmux, git, adapters, config });
+    const createServer = (connectedCrew?: string) =>
+      createMuxServer({ db, tmux, git, adapters, config, connectedCrew });
 
     http = await startHttpServer(createServer, { port: 0 });
     expect(http.url).toMatch(/^http:\/\/localhost:\d+$/);
