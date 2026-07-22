@@ -3,7 +3,7 @@ import type { MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
 import { assignments } from "../db/schema.ts";
 import type { TmuxExecutor } from "../tmux/executor.ts";
-import { findCrew, latestAssignment } from "./queries.ts";
+import { ASSIGNMENT_STATUS, findCrew, latestAssignment } from "./queries.ts";
 
 export interface SteerDeps {
   readonly db: MuxDb;
@@ -52,9 +52,12 @@ export async function steerCrew(deps: SteerDeps, input: SteerInput): Promise<Ste
   await tmux.run(["send-keys", "-t", paneId, "Enter"]);
 
   const current = latestAssignment(db, sessionKey, crewRow.id);
-  const resumed = current?.status === "blocked";
-  if (current && resumed) {
-    db.update(assignments).set({ status: "active" }).where(eq(assignments.id, current.id)).run();
+  const resumed = current?.status === ASSIGNMENT_STATUS.blocked;
+  if (current?.status === ASSIGNMENT_STATUS.blocked) {
+    db.update(assignments)
+      .set({ status: ASSIGNMENT_STATUS.active })
+      .where(eq(assignments.id, current.id))
+      .run();
   }
 
   return { crewId: crewRow.id, paneId, resumed };

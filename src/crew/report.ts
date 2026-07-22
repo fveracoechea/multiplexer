@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import type { MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
 import { assignments, type Event, events } from "../db/schema.ts";
-import { findCrew, latestAssignment } from "./queries.ts";
+import { ASSIGNMENT_STATUS, findCrew, latestAssignment } from "./queries.ts";
 
 /** The status of a crew report. `blocked` is a hard halt; `done` is terminal. */
 export const REPORT_STATUSES = ["progress", "milestone", "blocked", "done"] as const;
@@ -61,7 +61,10 @@ export function appendReport(deps: ReportDeps, input: ReportInput): Event {
       .get();
 
     if (input.status === "blocked") {
-      tx.update(assignments).set({ status: "blocked" }).where(eq(assignments.id, current.id)).run();
+      tx.update(assignments)
+        .set({ status: ASSIGNMENT_STATUS.blocked })
+        .where(eq(assignments.id, current.id))
+        .run();
     }
 
     return event;
