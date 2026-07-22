@@ -14,6 +14,7 @@ interface CrewOverviewItem {
   status: string | null;
   lastSummary: string | null;
   skill: string | null;
+  scope: string | null;
 }
 interface CrewDetail {
   name: string;
@@ -140,6 +141,33 @@ describe("report + crew_status tool surface", () => {
     expect(hicksItem as unknown as { events?: unknown }).not.toHaveProperty("events");
     // A crew that hasn't reported yet falls back to its assignment status.
     expect(overview.find((c) => c.name === "ripley")?.status).toBe("active");
+  });
+
+  test("retasking a crew starts a fresh event trail; prior events don't leak in", async () => {
+    const config = makeConfig("p");
+    const orchestrator = await connect(config);
+    await assign(orchestrator, "ripley", "research", "first task");
+
+    const ripley = await connect(config, "ripley");
+    await ripley.callTool({
+      name: "report",
+      arguments: { summary: "old progress", status: "progress" },
+    });
+
+    // Retask: same name, new (skill, scope) - a new assignment with no events yet.
+    await assign(orchestrator, "ripley", "research", "second task");
+
+    const detail = parse<CrewDetail>(
+      await orchestrator.callTool({ name: "crew_status", arguments: { name: "ripley" } }),
+    );
+    expect(detail.events).toHaveLength(0);
+
+    const overview = parse<CrewOverviewItem[]>(
+      await orchestrator.callTool({ name: "crew_status", arguments: {} }),
+    );
+    expect(overview).toHaveLength(1);
+    expect(overview[0]?.scope).toBe("second task");
+    expect(overview[0]?.lastSummary).toBeNull();
   });
 
   test("report is rejected on an orchestrator (non-crew) connection", async () => {

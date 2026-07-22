@@ -188,18 +188,33 @@ describe("assign_crew tool surface", () => {
     expect(crewRows.map((c) => c.paneId)).toEqual(["%1", "%2"]);
   });
 
-  test("re-assigning an existing crew name is rejected (retask not yet implemented)", async () => {
+  test("re-assigning an existing crew name retasks: same crew row, new assignment", async () => {
     const client = await connect({ db, tmux, config: makeConfig("proj-a") });
-    await client.callTool({
+    const first = await client.callTool({
       name: "assign_crew",
       arguments: { name: "ripley", skill: "research", scope: "one" },
     });
-    const result = await client.callTool({
+    const firstPayload = toolJson(first as never);
+
+    const second = await client.callTool({
       name: "assign_crew",
       arguments: { name: "ripley", skill: "research", scope: "two" },
     });
-    expect((result as { isError?: boolean }).isError).toBe(true);
+    const secondPayload = toolJson(second as never);
+
+    // Same crew identity and pane reused; a new assignment row is created.
+    expect(secondPayload.crewId).toBe(firstPayload.crewId);
+    expect(secondPayload.paneId).toBe(firstPayload.paneId);
+    expect(secondPayload.assignmentId).not.toBe(firstPayload.assignmentId);
+
     expect(db.select().from(crew).all()).toHaveLength(1);
+    const assignmentRows = db.select().from(assignments).all();
+    expect(assignmentRows).toHaveLength(2);
+    expect(assignmentRows.map((a) => a.scope)).toEqual(["one", "two"]);
+
+    // Retask reuses the pane via respawn-pane -k rather than splitting a new one.
+    expect(tmux.callsOf("split-window")).toHaveLength(0);
+    expect(tmux.callsOf("respawn-pane")).toHaveLength(2);
   });
 
   test("session key isolates two project sessions on one server", async () => {

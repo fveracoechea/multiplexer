@@ -42,8 +42,8 @@ export function createMuxServer(deps: MuxServerDeps): McpServer {
     {
       title: "Assign crew",
       description:
-        "Spawn (or, later, retask) a named crew agent with a (skill, scope) assignment. " +
-        "Read-only skills provision no worktree.",
+        "Spawn (or, for an existing name, retask) a named crew agent with a (skill, scope) " +
+        "assignment. Read-only skills provision no worktree.",
       inputSchema: {
         name: z.string().min(1).describe("Stable lowercase sci-fi crew name, unique per session."),
         skill: z.string().min(1).describe("Skill to run (e.g. research, implement, review)."),
