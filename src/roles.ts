@@ -21,3 +21,8 @@ export function buildCrewRole(): string {
 export function buildInitialPrompt(skill: string, scope: string): string {
   return `Use the ${skill} skill.\n\n${scope}`;
 }
+
+/** The wrap-up instruction sent into a crew's pane on a graceful `dismiss_crew`. */
+export function buildDismissPrompt(): string {
+  return "You are being dismissed. Wrap up your current work now and call report(done).";
+}

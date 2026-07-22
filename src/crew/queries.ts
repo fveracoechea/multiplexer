@@ -10,9 +10,10 @@ import { type Assignment, assignments, type Crew, crew, type Event, events } fro
 /**
  * `assignments.status` values outside the append-only event log: `active` is
  * the default; `blocked` is the hard halt `report(blocked)` sets and only
- * `steer_crew` clears (spec #17).
+ * `steer_crew` clears (spec #17); `done` is the terminal state `dismiss_crew`
+ * sets once an assignment completes, gracefully or forced (spec #18).
  */
-export const ASSIGNMENT_STATUS = { active: "active", blocked: "blocked" } as const;
+export const ASSIGNMENT_STATUS = { active: "active", blocked: "blocked", done: "done" } as const;
 
 /** The crew with `name` in `sessionKey`, or undefined. Name is matched as stored. */
 export function findCrew(db: MuxDb, sessionKey: string, name: string): Crew | undefined {

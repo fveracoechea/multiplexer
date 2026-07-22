@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Adapter } from "./adapter/types.ts";
 import type { MuxConfig } from "./config.ts";
 import { assignCrew } from "./crew/assign.ts";
+import { dismissCrew } from "./crew/dismiss.ts";
 import { appendReport, REPORT_STATUSES } from "./crew/report.ts";
 import { crewDetail, crewOverview } from "./crew/status.ts";
 import { steerCrew } from "./crew/steer.ts";
@@ -159,6 +160,41 @@ export function createMuxServer(deps: MuxServerDeps): McpServer {
       }
       const overview = crewOverview(deps);
       return { content: [{ type: "text", text: JSON.stringify(overview) }] };
+    },
+  );
+
+  // Orchestrator-facing: wind down one crew agent, or every crew in the
+  // session. Graceful by default (wrap-up message + grace window, always
+  // ending in a done event); force stops the pane immediately.
+  server.registerTool(
+    "dismiss_crew",
+    {
+      title: "Dismiss crew",
+      description:
+        "Dismiss a named crew agent, or every crew in the session when no name is given. " +
+        "Graceful by default: a wrap-up message and a small grace window, always ending in a " +
+        "done report. force stops the pane immediately. wipe also deletes the crew's worktree.",
+      inputSchema: {
+        name: z.string().optional().describe("Crew name to dismiss; omit to dismiss all."),
+        force: z
+          .boolean()
+          .optional()
+          .describe("Stop immediately instead of waiting on a grace window."),
+        wipe: z
+          .boolean()
+          .optional()
+          .describe("Also delete the crew's worktree (start from scratch)."),
+      },
+    },
+    async (args) => {
+      const result = await dismissCrew(deps, args);
+      const names = result.dismissed.map((d) => d.name).join(", ") || "no crew";
+      return {
+        content: [
+          { type: "text", text: `Dismissed ${names}.` },
+          { type: "text", text: JSON.stringify(result) },
+        ],
+      };
     },
   );
 
