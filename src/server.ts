@@ -6,12 +6,14 @@ import { assignCrew } from "./crew/assign.ts";
 import { appendReport, REPORT_STATUSES } from "./crew/report.ts";
 import { crewDetail, crewOverview } from "./crew/status.ts";
 import type { MuxDb } from "./db/index.ts";
+import type { GitExecutor } from "./git/executor.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
 
 /** Everything an MCP server instance needs to serve one shared, session-aware surface. */
 export interface MuxServerDeps {
   readonly db: MuxDb;
   readonly tmux: TmuxExecutor;
+  readonly git: GitExecutor;
   readonly adapters: ReadonlyMap<string, Adapter>;
   readonly config: MuxConfig;
   /**
