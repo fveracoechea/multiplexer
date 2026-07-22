@@ -3,6 +3,7 @@ import { basename, join } from "node:path";
 import { ClaudeAdapter } from "./adapter/claude.ts";
 import { MCP_SERVER_NAME, type MuxConfig } from "./config.ts";
 import { createDb } from "./db/index.ts";
+import { RealGitExecutor } from "./git/executor.ts";
 import { startHttpServer } from "./http.ts";
 import { createMuxServer } from "./server.ts";
 import { RealTmuxExecutor } from "./tmux/executor.ts";
@@ -31,9 +32,10 @@ async function main(): Promise<void> {
   };
 
   const tmux = new RealTmuxExecutor();
+  const git = new RealGitExecutor();
   const adapters = new Map([["claude", new ClaudeAdapter()]]);
 
-  const http = await startHttpServer(() => createMuxServer({ db, tmux, adapters, config }), {
+  const http = await startHttpServer(() => createMuxServer({ db, tmux, git, adapters, config }), {
     port,
   });
   console.log(`mux MCP server listening on ${http.mcpUrl} (session: ${sessionKey})`);

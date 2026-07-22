@@ -1,16 +1,19 @@
 import { eq } from "drizzle-orm";
 import type { Adapter } from "../adapter/types.ts";
-import { CREW_WINDOW_NAME, type MuxConfig } from "../config.ts";
+import { CREW_WINDOW_NAME, DEFAULT_BASE_BRANCH, type MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
 import { assignments, crew } from "../db/schema.ts";
+import type { GitExecutor } from "../git/executor.ts";
 import { buildCrewRole, buildInitialPrompt } from "../roles.ts";
 import type { TmuxExecutor } from "../tmux/executor.ts";
+import { provisionWorktree } from "./worktree.ts";
 
 const DEFAULT_AGENT_TYPE = "claude";
 
 export interface AssignDeps {
   readonly db: MuxDb;
   readonly tmux: TmuxExecutor;
+  readonly git: GitExecutor;
   readonly adapters: ReadonlyMap<string, Adapter>;
   readonly config: MuxConfig;
 }
@@ -36,10 +39,10 @@ export interface AssignResult {
  * `assign_crew` core: spawn a new crew agent.
  *
  * Writes one `crew` identity row and one `assignments` row, provisions the crew
- * tmux window lazily on the first assign of a session, and launches the agent
- * CLI (role-injected, MCP-wired) into its pane. Read-only skills get no
- * worktree. Retasking an existing name and worktree provisioning for
- * file-mutating skills are handled by their own tickets.
+ * tmux window lazily on the first assign of a session, provisions a git worktree
+ * for file-mutating skills (read-only skills get none), and launches the agent
+ * CLI (role-injected, MCP-wired) into its pane - in its worktree when it has one.
+ * Retasking an existing name is handled by its own ticket.
  */
 export async function assignCrew(deps: AssignDeps, input: AssignInput): Promise<AssignResult> {
   const { db, tmux, config } = deps;
@@ -60,10 +63,18 @@ export async function assignCrew(deps: AssignDeps, input: AssignInput): Promise<
     );
   }
 
-  // No assignment provisions a worktree yet: read-only skills never need one,
-  // and worktree provisioning for file-mutating skills is added in ticket #15.
-  const worktreePath: string | null = null;
-  const branch: string | null = null;
+  // File-mutating skills get a dedicated worktree + branch; read-only skills
+  // get none. A fresh crew's worktree is created here.
+  const worktree = await provisionWorktree(
+    {
+      git: deps.git,
+      serverPwd: config.serverPwd,
+      baseBranch: config.baseBranch ?? DEFAULT_BASE_BRANCH,
+    },
+    { sessionKey, crewName: name, skill: input.skill },
+  );
+  const worktreePath = worktree?.path ?? null;
+  const branch = worktree?.branch ?? null;
 
   // The crew window is created lazily on the first assign of a session; every
   // subsequent crew splits that window and re-tiles it.
@@ -76,7 +87,10 @@ export async function assignCrew(deps: AssignDeps, input: AssignInput): Promise<
     mcpServerName: config.mcpServerName,
     mcpUrl: config.mcpUrl,
   });
-  await tmux.run(["respawn-pane", "-k", "-t", paneId, ...launch]);
+  // Launch the agent in its worktree when it has one, so file-mutating work
+  // happens on the isolated checkout.
+  const startDir = worktreePath ? ["-c", worktreePath] : [];
+  await tmux.run(["respawn-pane", "-k", ...startDir, "-t", paneId, ...launch]);
 
   return db.transaction((tx) => {
     const insertedCrew = tx

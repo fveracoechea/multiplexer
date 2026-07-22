@@ -18,6 +18,11 @@ export interface MuxConfig {
    * worktrees) is rooted here and is gitignored (spec #11).
    */
   readonly serverPwd: string;
+  /**
+   * Branch that file-mutating crew worktrees branch from and re-sync against.
+   * Defaults to {@link DEFAULT_BASE_BRANCH} when omitted.
+   */
+  readonly baseBranch?: string;
 }
 
 /** The name of the MCP server as seen by connecting agent CLIs. */
@@ -25,3 +30,6 @@ export const MCP_SERVER_NAME = "mux";
 
 /** The tmux window that hosts crew panes, created lazily on first assign. */
 export const CREW_WINDOW_NAME = "crew";
+
+/** Default base branch for crew worktrees when the config doesn't set one. */
+export const DEFAULT_BASE_BRANCH = "main";

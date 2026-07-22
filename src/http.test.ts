@@ -5,6 +5,7 @@ import { ClaudeAdapter } from "./adapter/claude.ts";
 import type { MuxConfig } from "./config.ts";
 import { createDb } from "./db/index.ts";
 import { crew } from "./db/schema.ts";
+import { FakeGitExecutor } from "./git/executor.ts";
 import { type HttpServer, startHttpServer } from "./http.ts";
 import { createMuxServer } from "./server.ts";
 import { FakeTmuxExecutor } from "./tmux/executor.ts";
@@ -26,8 +27,9 @@ describe("streamable-HTTP transport", () => {
       mcpServerName: "mux",
       serverPwd: "/tmp/mux",
     };
+    const git = new FakeGitExecutor();
     const adapters = new Map([["claude", new ClaudeAdapter()]]);
-    const createServer = () => createMuxServer({ db, tmux, adapters, config });
+    const createServer = () => createMuxServer({ db, tmux, git, adapters, config });
 
     http = await startHttpServer(createServer, { port: 0 });
     expect(http.url).toMatch(/^http:\/\/localhost:\d+$/);

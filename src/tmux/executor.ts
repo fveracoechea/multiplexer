@@ -1,3 +1,5 @@
+import { spawnCapture } from "../exec.ts";
+
 /**
  * The tmux executor boundary.
  *
@@ -22,17 +24,8 @@ export interface TmuxExecutor {
 
 /** Runs real `tmux` via `Bun.spawn`. Never exercised in tests. */
 export class RealTmuxExecutor implements TmuxExecutor {
-  async run(args: string[]): Promise<TmuxResult> {
-    const proc = Bun.spawn(["tmux", ...args], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, exitCode] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    if (exitCode !== 0) {
-      const stderr = await new Response(proc.stderr).text();
-      throw new Error(`tmux ${args.join(" ")} failed (exit ${exitCode}): ${stderr.trim()}`);
-    }
-    return { stdout: stdout.trim(), exitCode };
+  run(args: string[]): Promise<TmuxResult> {
+    return spawnCapture("tmux", args);
   }
 }
 
