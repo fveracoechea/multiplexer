@@ -139,8 +139,9 @@ describe("assign_crew tool surface", () => {
     const mcpConfigIndex = respawn.indexOf("--mcp-config");
     expect(mcpConfigIndex).toBeGreaterThan(-1);
     const mcpConfig = JSON.parse(respawn[mcpConfigIndex + 1] as string);
+    // Crew connects to its own per-crew endpoint so reports are attributable (ADR-0001).
     expect(mcpConfig).toEqual({
-      mcpServers: { mux: { type: "http", url: MCP_URL } },
+      mcpServers: { mux: { type: "http", url: `${MCP_URL}/bishop` } },
     });
   });
 

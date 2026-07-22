@@ -24,10 +24,12 @@ export interface ServeOptions {
  * Runs in stateless mode: shared server-owned state lives in the DB and other
  * injected dependencies, not in the MCP session, so each HTTP request is served
  * by a fresh `McpServer` + transport (the SDK forbids reusing a stateless
- * transport across requests). `createServer` mints that per-request server.
+ * transport across requests). `createServer` mints that per-request server,
+ * receiving the crew identity parsed from the connection URL (ADR-0001):
+ * `/mcp` is the orchestrator's session connection, `/mcp/<crewName>` is a crew.
  */
 export async function startHttpServer(
-  createServer: () => McpServer,
+  createServer: (connectedCrew?: string) => McpServer,
   options: ServeOptions = {},
 ): Promise<HttpServer> {
   const path = options.path ?? "/mcp";
@@ -37,11 +39,12 @@ export async function startHttpServer(
     hostname: "127.0.0.1",
     async fetch(request) {
       const url = new URL(request.url);
-      if (url.pathname !== path) {
+      const connectedCrew = parseConnectedCrew(url.pathname, path);
+      if (connectedCrew === null) {
         return new Response("Not found", { status: 404 });
       }
 
-      const server = createServer();
+      const server = createServer(connectedCrew || undefined);
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
@@ -62,4 +65,22 @@ export async function startHttpServer(
       await bun.stop(true);
     },
   };
+}
+
+/**
+ * Resolve the connected crew from the request path (ADR-0001):
+ *  - `<path>`             -> `""`   (orchestrator, session-scoped connection)
+ *  - `<path>/<crewName>`  -> crew name
+ *  - anything else        -> `null` (404)
+ */
+function parseConnectedCrew(pathname: string, path: string): string | null {
+  if (pathname === path) {
+    return "";
+  }
+  const prefix = `${path}/`;
+  if (pathname.startsWith(prefix)) {
+    const crewName = pathname.slice(prefix.length);
+    return crewName.includes("/") ? null : decodeURIComponent(crewName);
+  }
+  return null;
 }
