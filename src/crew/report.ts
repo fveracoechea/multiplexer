@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm";
 import type { MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
-import { type Event, events } from "../db/schema.ts";
+import { assignments, type Event, events } from "../db/schema.ts";
 import { findCrew, latestAssignment } from "./queries.ts";
 
 /** The status of a crew report. `blocked` is a hard halt; `done` is terminal. */
@@ -27,7 +28,9 @@ export interface ReportInput {
  *
  * The crew is identified by the connection, not by an argument (ADR-0001), and
  * the event is scoped to the crew's most recent assignment so that a retask's
- * fresh event trail stays separate from the prior task's.
+ * fresh event trail stays separate from the prior task's. A `blocked` report
+ * additionally marks the assignment halted; only a subsequent `steer_crew`
+ * resumes it (spec #17).
  */
 export function appendReport(deps: ReportDeps, input: ReportInput): Event {
   const { db, config } = deps;
@@ -43,16 +46,24 @@ export function appendReport(deps: ReportDeps, input: ReportInput): Event {
     throw new Error(`crew "${input.connectedCrew}" has no assignment to report against`);
   }
 
-  return db
-    .insert(events)
-    .values({
-      sessionKey,
-      assignmentId: current.id,
-      status: input.status,
-      summary: input.summary,
-      reportPath: input.reportPath ?? null,
-      prUrl: input.prUrl ?? null,
-    })
-    .returning()
-    .get();
+  return db.transaction((tx) => {
+    const event = tx
+      .insert(events)
+      .values({
+        sessionKey,
+        assignmentId: current.id,
+        status: input.status,
+        summary: input.summary,
+        reportPath: input.reportPath ?? null,
+        prUrl: input.prUrl ?? null,
+      })
+      .returning()
+      .get();
+
+    if (input.status === "blocked") {
+      tx.update(assignments).set({ status: "blocked" }).where(eq(assignments.id, current.id)).run();
+    }
+
+    return event;
+  });
 }

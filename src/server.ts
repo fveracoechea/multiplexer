@@ -5,6 +5,7 @@ import type { MuxConfig } from "./config.ts";
 import { assignCrew } from "./crew/assign.ts";
 import { appendReport, REPORT_STATUSES } from "./crew/report.ts";
 import { crewDetail, crewOverview } from "./crew/status.ts";
+import { steerCrew } from "./crew/steer.ts";
 import type { MuxDb } from "./db/index.ts";
 import type { GitExecutor } from "./git/executor.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
@@ -101,6 +102,36 @@ export function createMuxServer(deps: MuxServerDeps): McpServer {
         content: [
           { type: "text", text: `Recorded ${event.status} report (event #${event.id}).` },
           { type: "text", text: JSON.stringify(event) },
+        ],
+      };
+    },
+  );
+
+  // Orchestrator-facing: deliver a steering message to a crew's pane. Valid at
+  // any crew status; resumes an assignment halted by report(blocked).
+  server.registerTool(
+    "steer_crew",
+    {
+      title: "Steer crew",
+      description:
+        "Deliver a message to a running crew agent's pane as send-keys input. Fire-and-forget " +
+        "and valid at any crew status; resumes a crew halted by report(blocked).",
+      inputSchema: {
+        name: z.string().min(1).describe("Crew name to steer."),
+        message: z.string().min(1).describe("Message to send into the crew's pane."),
+      },
+    },
+    async (args) => {
+      const result = await steerCrew(deps, args);
+      return {
+        content: [
+          {
+            type: "text",
+            text: result.resumed
+              ? `Steered ${args.name}; resumed from blocked.`
+              : `Steered ${args.name}.`,
+          },
+          { type: "text", text: JSON.stringify(result) },
         ],
       };
     },
