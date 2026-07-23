@@ -23,6 +23,12 @@ export interface MuxConfig {
    * Defaults to {@link DEFAULT_BASE_BRANCH} when omitted.
    */
   readonly baseBranch?: string;
+  /**
+   * How long a graceful `dismiss_crew` waits for the crew's own `report(done)`
+   * before the server synthesizes one itself. Defaults to
+   * {@link DEFAULT_GRACE_WINDOW_MS} when omitted.
+   */
+  readonly graceWindowMs?: number;
 }
 
 /** The name of the MCP server as seen by connecting agent CLIs. */
@@ -33,3 +39,6 @@ export const CREW_WINDOW_NAME = "crew";
 
 /** Default base branch for crew worktrees when the config doesn't set one. */
 export const DEFAULT_BASE_BRANCH = "main";
+
+/** Default grace window for a graceful `dismiss_crew` (spec #18). */
+export const DEFAULT_GRACE_WINDOW_MS = 5000;
