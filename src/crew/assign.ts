@@ -269,7 +269,7 @@ async function launchAgent(
     mcpServerName: config.mcpServerName,
     // Per-crew endpoint so the server can attribute this crew's reports to it
     // without trusting a spoofable tool argument (ADR-0001).
-    mcpUrl: `${config.mcpUrl}/${target.crewName}`,
+    mcpUrl: `${config.mcpUrl}/${config.sessionKey}/${target.crewName}`,
     worktreePath: target.worktreePath,
     serverPwd: config.serverPwd,
     sessionKey: config.sessionKey,

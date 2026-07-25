@@ -114,7 +114,7 @@ describe("assign_crew opencode adapter (tool surface)", () => {
     expect(opencodeJson).toEqual({
       $schema: "https://opencode.ai/config.json",
       mcp: {
-        mux: { type: "remote", url: "http://localhost:4123/mcp/bishop", enabled: true },
+        mux: { type: "remote", url: "http://localhost:4123/mcp/proj-a/bishop", enabled: true },
       },
     });
 
