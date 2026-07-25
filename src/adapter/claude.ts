@@ -1,4 +1,4 @@
-import type { Adapter, LaunchSpec } from "./types.ts";
+import type { Adapter, LaunchPlan, LaunchSpec } from "./types.ts";
 
 /**
  * Claude Code adapter.
@@ -11,23 +11,25 @@ import type { Adapter, LaunchSpec } from "./types.ts";
  * `type` is a configuration error in Claude Code, so `type` is always set.
  */
 export class ClaudeAdapter implements Adapter {
-  readonly agentType = "claude";
+  readonly agentType: string = "claude";
 
-  buildLaunchCommand(spec: LaunchSpec): string[] {
+  prepare(spec: LaunchSpec): LaunchPlan {
     const mcpConfig = JSON.stringify({
       mcpServers: {
         [spec.mcpServerName]: { type: "http", url: spec.mcpUrl },
       },
     });
 
-    return [
-      "claude",
-      spec.initialPrompt,
-      "--append-system-prompt",
-      spec.role,
-      "--strict-mcp-config",
-      "--mcp-config",
-      mcpConfig,
-    ];
+    return {
+      argv: [
+        "claude",
+        spec.initialPrompt,
+        "--append-system-prompt",
+        spec.role,
+        "--strict-mcp-config",
+        "--mcp-config",
+        mcpConfig,
+      ],
+    };
   }
 }

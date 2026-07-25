@@ -1,6 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import { ClaudeAdapter } from "./adapter/claude.ts";
+import { OpencodeAdapter } from "./adapter/opencode.ts";
+import type { Adapter } from "./adapter/types.ts";
 import { MCP_SERVER_NAME, type MuxConfig } from "./config.ts";
 import { createDb } from "./db/index.ts";
 import { RealGitExecutor } from "./git/executor.ts";
@@ -33,7 +35,10 @@ async function main(): Promise<void> {
 
   const tmux = new RealTmuxExecutor();
   const git = new RealGitExecutor();
-  const adapters = new Map([["claude", new ClaudeAdapter()]]);
+  const adapters: Map<string, Adapter> = new Map([
+    ["claude", new ClaudeAdapter()],
+    ["opencode", new OpencodeAdapter()],
+  ]);
 
   const http = await startHttpServer(
     (connectedCrew) => createMuxServer({ db, tmux, git, adapters, config, connectedCrew }),

@@ -223,7 +223,7 @@ async function launchAgent(
   input: AssignInput,
 ): Promise<void> {
   const { config } = deps;
-  const launch = adapter.buildLaunchCommand({
+  const plan = adapter.prepare({
     crewName: target.crewName,
     role: buildCrewRole(),
     initialPrompt: buildInitialPrompt(input.skill, input.scope),
@@ -231,11 +231,16 @@ async function launchAgent(
     // Per-crew endpoint so the server can attribute this crew's reports to it
     // without trusting a spoofable tool argument (ADR-0001).
     mcpUrl: `${config.mcpUrl}/${target.crewName}`,
+    worktreePath: target.worktreePath,
+    serverPwd: config.serverPwd,
+    sessionKey: config.sessionKey,
   });
-  // Launch the agent in its worktree when it has one, so file-mutating work
-  // happens on the isolated checkout.
-  const startDir = target.worktreePath ? ["-c", target.worktreePath] : [];
-  await deps.tmux.run(["respawn-pane", "-k", ...startDir, "-t", target.paneId, ...launch]);
+  // Launch in the adapter's chosen CWD when it picks one (e.g. opencode's
+  // per-crew config dir); otherwise fall back to the worktree for
+  // file-mutating skills, or the pane default for read-only skills.
+  const cwd = plan.cwd ?? target.worktreePath;
+  const startDir = cwd ? ["-c", cwd] : [];
+  await deps.tmux.run(["respawn-pane", "-k", ...startDir, "-t", target.paneId, ...plan.argv]);
 }
 
 /** Create (first assign) or split (subsequent) the crew window; return the new pane id. */

@@ -10,6 +10,9 @@ describe("ClaudeAdapter", () => {
     initialPrompt: "Use the research skill.\n\nsurvey the auth flow",
     mcpServerName: "mux",
     mcpUrl: "http://localhost:4123/mcp",
+    worktreePath: null,
+    serverPwd: "/tmp/mux",
+    sessionKey: "proj-a",
   };
 
   test("declares the claude agent type", () => {
@@ -17,20 +20,20 @@ describe("ClaudeAdapter", () => {
   });
 
   test("injects the role inline via --append-system-prompt", () => {
-    const argv = adapter.buildLaunchCommand(spec);
+    const { argv } = adapter.prepare(spec);
     const idx = argv.indexOf("--append-system-prompt");
     expect(idx).toBeGreaterThan(-1);
     expect(argv[idx + 1]).toBe(spec.role);
   });
 
   test("passes the initial prompt as claude's positional argument", () => {
-    const argv = adapter.buildLaunchCommand(spec);
+    const { argv } = adapter.prepare(spec);
     expect(argv[0]).toBe("claude");
     expect(argv[1]).toBe(spec.initialPrompt);
   });
 
   test("wires the MCP server hermetically with an http url entry", () => {
-    const argv = adapter.buildLaunchCommand(spec);
+    const { argv } = adapter.prepare(spec);
     expect(argv).toContain("--strict-mcp-config");
 
     const idx = argv.indexOf("--mcp-config");
@@ -39,5 +42,10 @@ describe("ClaudeAdapter", () => {
     expect(JSON.parse(argv[idx + 1] as string)).toEqual({
       mcpServers: { mux: { type: "http", url: "http://localhost:4123/mcp" } },
     });
+  });
+
+  test("does not redirect the launch cwd; the worktree path is used by the caller", () => {
+    const { cwd } = adapter.prepare(spec);
+    expect(cwd).toBeUndefined();
   });
 });
