@@ -6,12 +6,7 @@ import { assignments, type Crew, crew } from "../db/schema.ts";
 import type { GitExecutor } from "../git/executor.ts";
 import { buildCrewRole, buildInitialPrompt } from "../roles.ts";
 import type { TmuxExecutor } from "../tmux/executor.ts";
-import {
-  baseForIssue,
-  integrationBranchName,
-  provisionIntegrationBranch,
-  sharerCount,
-} from "./integration.ts";
+import { integrationBranchName, provisionIntegrationBranch, sharerCount } from "./integration.ts";
 import { findCrew } from "./queries.ts";
 import { provisionWorktree } from "./worktree.ts";
 

@@ -211,4 +211,88 @@ describe("report + crew_status tool surface", () => {
     expect(overviewB[0]?.skill).toBe("research");
     expect(overviewB[0]?.lastSummary).toBeNull();
   });
+
+  test("milestone, blocked, and done surface in the tmux status bar; progress does not", async () => {
+    const config = makeConfig("p");
+    const orchestrator = await connect(config);
+    await assign(orchestrator, "ripley");
+
+    const ripley = await connect(config, "ripley");
+
+    // progress: too frequent, no alert.
+    await ripley.callTool({
+      name: "report",
+      arguments: { summary: "chugging along", status: "progress" },
+    });
+    expect(tmux.callsOf("display-message")).toHaveLength(0);
+
+    // milestone: alert fires.
+    await ripley.callTool({
+      name: "report",
+      arguments: { summary: "halfway there", status: "milestone" },
+    });
+    expect(tmux.callsOf("display-message")).toHaveLength(1);
+    expect(tmux.callsOf("display-message")[0]).toEqual([
+      "display-message",
+      "-t",
+      "p",
+      "-d",
+      "5000",
+      "[mux] ripley milestone: halfway there",
+    ]);
+
+    // blocked: alert fires.
+    await ripley.callTool({
+      name: "report",
+      arguments: { summary: "stuck on tests", status: "blocked" },
+    });
+    expect(tmux.callsOf("display-message")).toHaveLength(2);
+    expect(tmux.callsOf("display-message")[1]?.at(-1)).toBe("[mux] ripley blocked: stuck on tests");
+
+    // done: alert fires.
+    await ripley.callTool({
+      name: "report",
+      arguments: { summary: "finished", status: "done" },
+    });
+    expect(tmux.callsOf("display-message")).toHaveLength(3);
+    expect(tmux.callsOf("display-message")[2]?.at(-1)).toBe("[mux] ripley done: finished");
+  });
+
+  test("status-bar alerts are scoped by session key so a session only shows its own crew", async () => {
+    const configA = makeConfig("proj-a");
+    const configB = makeConfig("proj-b");
+    const orchA = await connect(configA);
+    const orchB = await connect(configB);
+    await assign(orchA, "ripley");
+    await assign(orchB, "bishop");
+
+    const ripleyA = await connect(configA, "ripley");
+    await ripleyA.callTool({
+      name: "report",
+      arguments: { summary: "a-milestone", status: "milestone" },
+    });
+
+    // The alert targets session proj-a only; proj-b's status bar is untouched.
+    expect(tmux.callsOf("display-message")).toEqual([
+      ["display-message", "-t", "proj-a", "-d", "5000", "[mux] ripley milestone: a-milestone"],
+    ]);
+  });
+
+  test("the alert channel is independent of the pull-based crew_status digests", async () => {
+    const config = makeConfig("p");
+    const orchestrator = await connect(config);
+    await assign(orchestrator, "ripley");
+
+    const ripley = await connect(config, "ripley");
+    await ripley.callTool({
+      name: "report",
+      arguments: { summary: "milestone reached", status: "milestone" },
+    });
+
+    // crew_status carries the same event in its digest; the alert was emitted
+    // at event time, not on this pull. The pull itself emits no alert.
+    const callsBefore = tmux.callsOf("display-message").length;
+    await orchestrator.callTool({ name: "crew_status", arguments: { name: "ripley" } });
+    expect(tmux.callsOf("display-message")).toHaveLength(callsBefore);
+  });
 });

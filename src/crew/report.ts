@@ -3,6 +3,7 @@ import { DEFAULT_BASE_BRANCH, type MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
 import { assignments, type Event, events } from "../db/schema.ts";
 import type { PrExecutor } from "../pr/executor.ts";
+import type { TmuxExecutor } from "../tmux/executor.ts";
 import { allSharersDone, openIntegrationPr } from "./integration.ts";
 import { ASSIGNMENT_STATUS, findCrew, latestAssignment, latestEvent } from "./queries.ts";
 
@@ -10,10 +11,18 @@ import { ASSIGNMENT_STATUS, findCrew, latestAssignment, latestEvent } from "./qu
 export const REPORT_STATUSES = ["progress", "milestone", "blocked", "done"] as const;
 export type ReportStatus = (typeof REPORT_STATUSES)[number];
 
+/**
+ * Statuses worth surfacing passively in the tmux status bar so the Engineer
+ * notices them without polling (spec #25). `progress` is deliberately excluded
+ * as too frequent; the Orchestrator's bounded `crew_status` digests cover it.
+ */
+const ALERT_STATUSES: ReadonlySet<ReportStatus> = new Set(["milestone", "blocked", "done"]);
+
 export interface ReportDeps {
   readonly db: MuxDb;
   readonly config: MuxConfig;
   readonly pr: PrExecutor;
+  readonly tmux: TmuxExecutor;
 }
 
 export interface ReportInput {
@@ -88,6 +97,19 @@ export async function appendReport(deps: ReportDeps, input: ReportInput): Promis
     return inserted;
   });
 
+  // Real-time human alert in the tmux status bar for notable events (spec #25).
+  // Independent of the pull-based `crew_status` digests - emitted at event time,
+  // scoped to this session's tmux session so a session only shows its own crew.
+  if (ALERT_STATUSES.has(input.status)) {
+    await emitStatusBarAlert(
+      deps.tmux,
+      sessionKey,
+      input.connectedCrew,
+      input.status,
+      input.summary,
+    );
+  }
+
   // A `done` on a shared issue may be the last one: open the final integration
   // PR when every sharer is now done. Best-effort - a failure to open the PR
   // does not un-record the `done` report; the Orchestrator can retry.
@@ -117,4 +139,21 @@ export async function appendReport(deps: ReportDeps, input: ReportInput): Promis
   }
 
   return { event };
+}
+
+/**
+ * Surface a notable crew event in the tmux status bar via `display-message`,
+ * targeted at this session's tmux session so a session only sees its own crew
+ * (spec #25). The alert channel is independent of the pull-based `crew_status`
+ * digests - it fires at event time, not on poll.
+ */
+async function emitStatusBarAlert(
+  tmux: TmuxExecutor,
+  sessionKey: string,
+  crewName: string,
+  status: ReportStatus,
+  summary: string,
+): Promise<void> {
+  const text = `[mux] ${crewName} ${status}: ${summary}`;
+  await tmux.run(["display-message", "-t", sessionKey, "-d", "5000", text]);
 }
