@@ -14,7 +14,7 @@ import { FakeTmuxExecutor } from "../tmux/executor.ts";
 const config: MuxConfig = {
   sessionKey: "proj-a",
   mcpUrl: "http://localhost:4123/mcp",
-  mcpServerName: "mux",
+  mcpServerName: "multiplexer",
   serverPwd: "/srv",
   baseBranch: "main",
 };
@@ -62,12 +62,19 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
     });
 
     const row = crewRow("ripley");
-    expect(row?.worktreePath).toBe("/srv/.mux/worktrees/proj-a/ripley");
-    expect(row?.branch).toBe("mux/proj-a/ripley");
+    expect(row?.worktreePath).toBe("/srv/.multiplexer/worktrees/proj-a/ripley");
+    expect(row?.branch).toBe("multiplexer/proj-a/ripley");
 
     // git worktree add was emitted through the fake executor.
     expect(git.callsOf("worktree")).toEqual([
-      ["worktree", "add", "-b", "mux/proj-a/ripley", "/srv/.mux/worktrees/proj-a/ripley", "main"],
+      [
+        "worktree",
+        "add",
+        "-b",
+        "multiplexer/proj-a/ripley",
+        "/srv/.multiplexer/worktrees/proj-a/ripley",
+        "main",
+      ],
     ]);
 
     // The agent is launched in its worktree via respawn-pane -c.
@@ -75,7 +82,7 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
     if (!respawn) throw new Error("expected respawn-pane");
     const cIndex = respawn.indexOf("-c");
     expect(cIndex).toBeGreaterThan(-1);
-    expect(respawn[cIndex + 1]).toBe("/srv/.mux/worktrees/proj-a/ripley");
+    expect(respawn[cIndex + 1]).toBe("/srv/.multiplexer/worktrees/proj-a/ripley");
   });
 
   test("a read-only skill provisions no worktree and launches with no start dir", async () => {
@@ -108,17 +115,31 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
 
     const row = crewRow("ripley");
     // Identity (worktree path + branch) is unchanged across the retask.
-    expect(row?.worktreePath).toBe("/srv/.mux/worktrees/proj-a/ripley");
-    expect(row?.branch).toBe("mux/proj-a/ripley");
+    expect(row?.worktreePath).toBe("/srv/.multiplexer/worktrees/proj-a/ripley");
+    expect(row?.branch).toBe("multiplexer/proj-a/ripley");
 
     // Only one `worktree add`; the retask re-syncs (fetch + rebase) instead.
     expect(git.callsOf("worktree")).toEqual([
-      ["worktree", "add", "-b", "mux/proj-a/ripley", "/srv/.mux/worktrees/proj-a/ripley", "main"],
+      [
+        "worktree",
+        "add",
+        "-b",
+        "multiplexer/proj-a/ripley",
+        "/srv/.multiplexer/worktrees/proj-a/ripley",
+        "main",
+      ],
     ]);
     expect(git.calls).toEqual([
-      ["worktree", "add", "-b", "mux/proj-a/ripley", "/srv/.mux/worktrees/proj-a/ripley", "main"],
-      ["-C", "/srv/.mux/worktrees/proj-a/ripley", "fetch", "origin", "main"],
-      ["-C", "/srv/.mux/worktrees/proj-a/ripley", "rebase", "FETCH_HEAD"],
+      [
+        "worktree",
+        "add",
+        "-b",
+        "multiplexer/proj-a/ripley",
+        "/srv/.multiplexer/worktrees/proj-a/ripley",
+        "main",
+      ],
+      ["-C", "/srv/.multiplexer/worktrees/proj-a/ripley", "fetch", "origin", "main"],
+      ["-C", "/srv/.multiplexer/worktrees/proj-a/ripley", "rebase", "FETCH_HEAD"],
     ]);
 
     // Both launches land in the same worktree; only one pane was ever created.
@@ -126,7 +147,7 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
     expect(respawns).toHaveLength(2);
     for (const respawn of respawns) {
       const cIndex = respawn.indexOf("-c");
-      expect(respawn[cIndex + 1]).toBe("/srv/.mux/worktrees/proj-a/ripley");
+      expect(respawn[cIndex + 1]).toBe("/srv/.multiplexer/worktrees/proj-a/ripley");
     }
     expect(tmux.callsOf("new-window")).toHaveLength(1);
     expect(tmux.callsOf("split-window")).toHaveLength(0);
@@ -147,8 +168,8 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
     });
 
     const row = crewRow("ripley");
-    expect(row?.worktreePath).toBe("/srv/.mux/worktrees/proj-a/ripley");
-    expect(row?.branch).toBe("mux/proj-a/ripley");
+    expect(row?.worktreePath).toBe("/srv/.multiplexer/worktrees/proj-a/ripley");
+    expect(row?.branch).toBe("multiplexer/proj-a/ripley");
 
     // The read-only retask ran no git and launched with no start dir.
     expect(git.callsOf("worktree")).toHaveLength(1);
@@ -165,14 +186,14 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
     expect(git.callsOf("worktree")).toHaveLength(1);
     expect(git.calls.at(-2)).toEqual([
       "-C",
-      "/srv/.mux/worktrees/proj-a/ripley",
+      "/srv/.multiplexer/worktrees/proj-a/ripley",
       "fetch",
       "origin",
       "main",
     ]);
     expect(git.calls.at(-1)).toEqual([
       "-C",
-      "/srv/.mux/worktrees/proj-a/ripley",
+      "/srv/.multiplexer/worktrees/proj-a/ripley",
       "rebase",
       "FETCH_HEAD",
     ]);

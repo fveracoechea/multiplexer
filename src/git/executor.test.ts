@@ -4,11 +4,11 @@ import { FakeGitExecutor } from "./executor.ts";
 describe("FakeGitExecutor", () => {
   test("records the exact argv of every call", async () => {
     const git = new FakeGitExecutor();
-    await git.run(["worktree", "add", "-b", "mux/p/ripley", "/srv/wt", "main"]);
+    await git.run(["worktree", "add", "-b", "multiplexer/p/ripley", "/srv/wt", "main"]);
     await git.run(["-C", "/srv/wt", "rebase", "main"]);
 
     expect(git.calls).toEqual([
-      ["worktree", "add", "-b", "mux/p/ripley", "/srv/wt", "main"],
+      ["worktree", "add", "-b", "multiplexer/p/ripley", "/srv/wt", "main"],
       ["-C", "/srv/wt", "rebase", "main"],
     ]);
   });

@@ -13,7 +13,7 @@ import type { Adapter, LaunchPlan, LaunchSpec } from "./types.ts";
  * server is reached by URL, so `remote`, not `local`).
  *
  * Both files are written into a per-crew config dir rooted under the server's
- * `.mux/` (gitignored), so concurrent crews never collide on opencode config
+ * `.multiplexer/` (gitignored), so concurrent crews never collide on opencode config
  * and the user's project `opencode.json` is never overwritten. The CLI is
  * launched with that config dir as its CWD; a file-mutating crew's worktree
  * path is folded into the role so the agent navigates to its worktree by
@@ -55,11 +55,11 @@ export class OpencodeAdapter implements Adapter {
 }
 
 /**
- * The per-crew opencode config dir: `<serverPwd>/.mux/opencode/<sessionKey>/<crewName>`.
- * Lives under the gitignored `.mux/` so it never reaches the repo.
+ * The per-crew opencode config dir: `<serverPwd>/.multiplexer/opencode/<sessionKey>/<crewName>`.
+ * Lives under the gitignored `.multiplexer/` so it never reaches the repo.
  */
 export function opencodeConfigDir(serverPwd: string, sessionKey: string, crewName: string): string {
-  return join(serverPwd, ".mux", "opencode", sessionKey, crewName);
+  return join(serverPwd, ".multiplexer", "opencode", sessionKey, crewName);
 }
 
 /** Prepend a worktree preamble to the role so the agent navigates to its project. */
@@ -79,7 +79,7 @@ function withWorktreePreamble(
 function agentFile(crewName: string, role: string): string {
   return [
     "---",
-    `description: mux crew agent ${crewName}`,
+    `description: multiplexer crew agent ${crewName}`,
     "mode: primary",
     "---",
     "",

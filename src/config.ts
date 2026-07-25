@@ -1,5 +1,5 @@
 /**
- * Server-wide configuration for a mux MCP server instance.
+ * Server-wide configuration for a multiplexer MCP server instance.
  *
  * The `sessionKey` is the project/session isolation boundary: it is stamped on
  * every DB row and every tmux target string so that one project session's crew,
@@ -32,7 +32,7 @@ export interface MuxConfig {
 }
 
 /** The name of the MCP server as seen by connecting agent CLIs. */
-export const MCP_SERVER_NAME = "mux";
+export const MCP_SERVER_NAME = "multiplexer";
 
 /** The tmux window that hosts crew panes, created lazily on first assign. */
 export const CREW_WINDOW_NAME = "crew";

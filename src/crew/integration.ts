@@ -16,12 +16,12 @@ import type { PrExecutor } from "../pr/executor.ts";
  */
 
 /**
- * The integration branch name: `mux/integration/<sessionKey>/<issue>`. Stable
+ * The integration branch name: `multiplexer/integration/<sessionKey>/<issue>`. Stable
  * per (session, issue) pair so concurrent sessions with the same issue don't
  * collide, and a sharer's base is computable from its own assignment.
  */
 export function integrationBranchName(sessionKey: string, issue: number): string {
-  return `mux/integration/${sessionKey}/${issue}`;
+  return `multiplexer/integration/${sessionKey}/${issue}`;
 }
 
 /** The assignments in a session sharing the given issue. */

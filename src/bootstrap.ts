@@ -6,7 +6,7 @@ import { buildOrchestratorRole } from "./roles.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
 
 /** The tmux session the shared server runs in, separate from any project. */
-export const SERVER_TMUX_SESSION = "mux-server";
+export const SERVER_TMUX_SESSION = "multiplexer-server";
 /** The tmux window the Orchestrator runs in, inside the user's project session. */
 export const ORCHESTRATOR_WINDOW = "orchestrator";
 /** Default fixed port the server is discovered on (spec #22). */
@@ -14,12 +14,12 @@ export const DEFAULT_PORT = 4123;
 
 /** Where the PID file lives; the bootstrap confirms a healthy server is ours. */
 export function pidFilePath(): string {
-  return join(process.env.HOME ?? "/tmp", ".mux", "server.pid");
+  return join(process.env.HOME ?? "/tmp", ".multiplexer", "server.pid");
 }
 
 /** Where the server's state (DB, logs) is rooted; the bootstrap passes this to the server. */
 export function serverStatePath(): string {
-  return join(process.env.HOME ?? "/tmp", ".mux", "server");
+  return join(process.env.HOME ?? "/tmp", ".multiplexer", "server");
 }
 
 export interface BootstrapConfig {
@@ -45,7 +45,7 @@ export interface BootstrapDeps {
 }
 
 /**
- * Bootstrap the mux system: ensure the shared MCP server is running (reusing a
+ * Bootstrap the multiplexer system: ensure the shared MCP server is running (reusing a
  * healthy one, starting one otherwise), then create the Orchestrator window in
  * the user's tmux session and launch the Orchestrator agent pre-wired to the
  * server (spec #22).
@@ -63,13 +63,13 @@ export async function bootstrap(deps: BootstrapDeps, config: BootstrapConfig): P
 
   const reused = await discoverOrStartServer(deps, mcpUrl);
   if (reused) {
-    console.log(`mux: reused existing MCP server at ${mcpUrl}`);
+    console.log(`multiplexer: reused existing MCP server at ${mcpUrl}`);
   } else {
-    console.log(`mux: started MCP server in tmux session ${SERVER_TMUX_SESSION}`);
+    console.log(`multiplexer: started MCP server in tmux session ${SERVER_TMUX_SESSION}`);
   }
 
   await launchOrchestrator(deps, config, orchestratorMcpUrl);
-  console.log(`mux: orchestrator launched in ${config.tmuxSession}:${ORCHESTRATOR_WINDOW}`);
+  console.log(`multiplexer: orchestrator launched in ${config.tmuxSession}:${ORCHESTRATOR_WINDOW}`);
 }
 
 /** Return true when a healthy server is already running at `mcpUrl` and is ours. */
@@ -119,7 +119,7 @@ async function waitForHealthy(deps: BootstrapDeps, mcpUrl: string): Promise<void
     if (await deps.isHealthy(mcpUrl)) return;
     await deps.sleep(100);
   }
-  throw new Error(`mux server did not become healthy at ${mcpUrl}`);
+  throw new Error(`multiplexer server did not become healthy at ${mcpUrl}`);
 }
 
 /** Create the Orchestrator window and launch the agent pre-wired to the server. */

@@ -29,7 +29,7 @@ export interface MuxServerDeps {
 }
 
 /**
- * Build the mux MCP server and register its tool surface.
+ * Build the multiplexer MCP server and register its tool surface.
  *
  * This is the single seam the whole system is tested through: tools are driven
  * against a real server + real in-memory DB, asserting resulting DB rows and

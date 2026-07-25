@@ -17,12 +17,12 @@ function makeConfig(sessionKey: string): MuxConfig {
   return {
     sessionKey,
     mcpUrl: MCP_URL,
-    mcpServerName: "mux",
-    serverPwd: "/tmp/mux",
+    mcpServerName: "multiplexer",
+    serverPwd: "/tmp/multiplexer",
   };
 }
 
-/** Connect a real MCP client to a real mux server over the in-process transport. */
+/** Connect a real MCP client to a real multiplexer server over the in-process transport. */
 async function connect(deps: {
   db: MuxDb;
   tmux: FakeTmuxExecutor;
@@ -145,7 +145,7 @@ describe("assign_crew tool surface", () => {
     const mcpConfig = JSON.parse(respawn[mcpConfigIndex + 1] as string);
     // Crew connects to its own per-crew endpoint so reports are attributable (ADR-0001).
     expect(mcpConfig).toEqual({
-      mcpServers: { mux: { type: "http", url: `${MCP_URL}/proj-a/bishop` } },
+      mcpServers: { multiplexer: { type: "http", url: `${MCP_URL}/proj-a/bishop` } },
     });
   });
 

@@ -26,7 +26,7 @@ export interface ParsedConnection {
 }
 
 /**
- * Serve the mux MCP tool surface over streamable-HTTP on localhost using
+ * Serve the multiplexer MCP tool surface over streamable-HTTP on localhost using
  * web-standard `Request`/`Response`, wired to `Bun.serve`.
  *
  * Runs in stateless mode: shared server-owned state lives in the DB and other

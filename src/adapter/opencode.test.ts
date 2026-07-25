@@ -9,7 +9,7 @@ describe("OpencodeAdapter", () => {
   let serverPwd: string;
 
   beforeEach(() => {
-    serverPwd = mkdtempSync(join(tmpdir(), "mux-opencode-"));
+    serverPwd = mkdtempSync(join(tmpdir(), "multiplexer-opencode-"));
   });
 
   afterEach(() => {
@@ -24,7 +24,7 @@ describe("OpencodeAdapter", () => {
   const baseSpec = {
     role: "You are a crew agent in a tmux-based orchestration system.",
     initialPrompt: "Use the research skill.\n\nsurvey the auth flow",
-    mcpServerName: "mux",
+    mcpServerName: "multiplexer",
     mcpUrl: "http://localhost:4123/mcp/ripley",
   };
 
@@ -68,7 +68,7 @@ describe("OpencodeAdapter", () => {
     // Frontmatter declares a primary-mode agent.
     expect(agentFile).toContain("---");
     expect(agentFile).toContain("mode: primary");
-    expect(agentFile).toContain(`description: mux crew agent ${crewName}`);
+    expect(agentFile).toContain(`description: multiplexer crew agent ${crewName}`);
     // Body is the role.
     expect(agentFile).toContain(baseSpec.role);
   });
@@ -102,7 +102,7 @@ describe("OpencodeAdapter", () => {
   });
 
   test("a file-mutating crew's role preamble names its worktree path", () => {
-    const worktreePath = "/srv/.mux/worktrees/proj-a/ripley";
+    const worktreePath = "/srv/.multiplexer/worktrees/proj-a/ripley";
     adapter.prepare({
       ...baseSpec,
       crewName: "ripley",

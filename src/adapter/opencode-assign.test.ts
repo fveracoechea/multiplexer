@@ -33,11 +33,11 @@ describe("assign_crew opencode adapter (tool surface)", () => {
     db = createDb();
     tmux = new FakeTmuxExecutor();
     git = new FakeGitExecutor();
-    serverPwd = mkdtempSync(join(tmpdir(), "mux-opencode-surface-"));
+    serverPwd = mkdtempSync(join(tmpdir(), "multiplexer-opencode-surface-"));
     config = {
       sessionKey: "proj-a",
       mcpUrl: "http://localhost:4123/mcp",
-      mcpServerName: "mux",
+      mcpServerName: "multiplexer",
       serverPwd,
     };
   });
@@ -94,7 +94,7 @@ describe("assign_crew opencode adapter (tool surface)", () => {
     expect(respawn[agentIdx + 1]).toBe("ripley");
   });
 
-  test("the opencode config files are written under the server-owned .mux/ dir", async () => {
+  test("the opencode config files are written under the server-owned .multiplexer/ dir", async () => {
     const client = await connect();
     await client.callTool({
       name: "assign_crew",
@@ -114,13 +114,17 @@ describe("assign_crew opencode adapter (tool surface)", () => {
     expect(opencodeJson).toEqual({
       $schema: "https://opencode.ai/config.json",
       mcp: {
-        mux: { type: "remote", url: "http://localhost:4123/mcp/proj-a/bishop", enabled: true },
+        multiplexer: {
+          type: "remote",
+          url: "http://localhost:4123/mcp/proj-a/bishop",
+          enabled: true,
+        },
       },
     });
 
     const agentFile = readFileSync(join(configDir, ".opencode", "agents", "bishop.md"), "utf8");
     expect(agentFile).toContain("mode: primary");
-    expect(agentFile).toContain("mux crew agent bishop");
+    expect(agentFile).toContain("multiplexer crew agent bishop");
   });
 
   test("a file-mutating opencode crew still launches with the per-crew config dir as cwd", async () => {
@@ -141,8 +145,8 @@ describe("assign_crew opencode adapter (tool surface)", () => {
         "worktree",
         "add",
         "-b",
-        "mux/proj-a/hicks",
-        `${serverPwd}/.mux/worktrees/proj-a/hicks`,
+        "multiplexer/proj-a/hicks",
+        `${serverPwd}/.multiplexer/worktrees/proj-a/hicks`,
         "main",
       ],
     ]);

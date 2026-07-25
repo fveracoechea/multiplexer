@@ -25,8 +25,8 @@ describe("streamable-HTTP transport", () => {
     const config: MuxConfig = {
       sessionKey: "proj-http",
       mcpUrl: "http://localhost:0/mcp",
-      mcpServerName: "mux",
-      serverPwd: "/tmp/mux",
+      mcpServerName: "multiplexer",
+      serverPwd: "/tmp/multiplexer",
     };
     const git = new FakeGitExecutor();
     const pr = new FakePrExecutor();
@@ -72,8 +72,8 @@ describe("streamable-HTTP transport", () => {
     const config: MuxConfig = {
       sessionKey: "proj-http",
       mcpUrl: "http://localhost:0/mcp",
-      mcpServerName: "mux",
-      serverPwd: "/tmp/mux",
+      mcpServerName: "multiplexer",
+      serverPwd: "/tmp/multiplexer",
     };
     const createServer = (connection: { sessionKey: string; crewName?: string }) =>
       createMuxServer({
@@ -132,8 +132,8 @@ describe("streamable-HTTP transport", () => {
     const baseConfig: MuxConfig = {
       sessionKey: "",
       mcpUrl: "http://localhost:0/mcp",
-      mcpServerName: "mux",
-      serverPwd: "/tmp/mux",
+      mcpServerName: "multiplexer",
+      serverPwd: "/tmp/multiplexer",
     };
     const createServer = (connection: { sessionKey: string; crewName?: string }) =>
       createMuxServer({

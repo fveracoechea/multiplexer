@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 /**
- * Drizzle schema for the mux state store (source of truth, spec #11).
+ * Drizzle schema for the multiplexer state store (source of truth, spec #11).
  *
  * Three tables, each carrying `sessionKey` for project/session isolation:
  *  - `crew`        identity; persists across retask/dismiss/session-restart.

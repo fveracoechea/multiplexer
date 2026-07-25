@@ -13,9 +13,9 @@ import { createMuxServer } from "./server.ts";
 import { RealTmuxExecutor } from "./tmux/executor.ts";
 
 /**
- * Production entrypoint: boot the shared mux MCP server over streamable-HTTP.
+ * Production entrypoint: boot the shared multiplexer MCP server over streamable-HTTP.
  *
- * The bootstrap (`mux` CLI) owns port discovery and session lifecycle; here we
+ * The bootstrap (`multiplexer` CLI) owns port discovery and session lifecycle; here we
  * read the essentials from the environment with sensible defaults so the server
  * is runnable on its own. All server-owned state is rooted at the server's PWD.
  *
@@ -25,12 +25,12 @@ import { RealTmuxExecutor } from "./tmux/executor.ts";
  * events are isolated by its own key (spec #22, ADR-0002).
  */
 async function main(): Promise<void> {
-  const port = Number(Bun.env.MUX_PORT ?? 4123);
+  const port = Number(Bun.env.MULTIPLEXER_PORT ?? 4123);
   const serverPwd = process.cwd();
 
-  const stateDir = join(serverPwd, ".mux");
+  const stateDir = join(serverPwd, ".multiplexer");
   mkdirSync(stateDir, { recursive: true });
-  const db = createDb(join(stateDir, "mux.db"));
+  const db = createDb(join(stateDir, "multiplexer.db"));
 
   // Record our PID so the bootstrap can confirm a healthy server is ours.
   const pidFile = pidFilePath();
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     },
     { port },
   );
-  console.log(`mux MCP server listening on ${http.mcpUrl} (PID ${process.pid})`);
+  console.log(`multiplexer MCP server listening on ${http.mcpUrl} (PID ${process.pid})`);
 }
 
 main().catch((error) => {

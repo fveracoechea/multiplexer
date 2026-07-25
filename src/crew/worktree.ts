@@ -30,7 +30,7 @@ export interface WorktreePlan {
  * that needs none.
  *
  * File-mutating skills get a dedicated worktree + branch rooted under the
- * server's PWD (inside the gitignored `.mux/`), so parallel crew never collide
+ * server's PWD (inside the gitignored `.multiplexer/`), so parallel crew never collide
  * on the working tree. A fresh crew's worktree is created; an existing crew's
  * worktree is re-synced against its base branch immediately before the new task
  * (spec #15). Worktrees persist by default - deletion is the dismiss `wipe` path.
@@ -59,12 +59,12 @@ export async function provisionWorktree(
   return { path, branch };
 }
 
-/** `<serverPwd>/.mux/worktrees/<sessionKey>/<crewName>` - gitignored via `.mux/`. */
+/** `<serverPwd>/.multiplexer/worktrees/<sessionKey>/<crewName>` - gitignored via `.multiplexer/`. */
 export function worktreePath(serverPwd: string, sessionKey: string, crewName: string): string {
-  return join(serverPwd, ".mux", "worktrees", sessionKey, crewName);
+  return join(serverPwd, ".multiplexer", "worktrees", sessionKey, crewName);
 }
 
 /** Stable per-crew branch name, namespaced by session. */
 export function worktreeBranch(sessionKey: string, crewName: string): string {
-  return `mux/${sessionKey}/${crewName}`;
+  return `multiplexer/${sessionKey}/${crewName}`;
 }

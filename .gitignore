@@ -9,7 +9,7 @@ dist/
 .scratch/
 
 # Server-owned state (SQLite DB, logs), rooted at the server's PWD
-.mux/
+.multiplexer/
 
 # Ephemeral agent worktrees (created by subagent isolation; never track)
 .claude/worktrees/

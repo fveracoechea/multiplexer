@@ -16,7 +16,7 @@ describe("provisionWorktree", () => {
     expect(git.calls).toHaveLength(0);
   });
 
-  test("a file-mutating skill creates a dedicated worktree + branch under .mux/", async () => {
+  test("a file-mutating skill creates a dedicated worktree + branch under .multiplexer/", async () => {
     const git = new FakeGitExecutor();
     const plan = await provisionWorktree(deps(git), {
       sessionKey: "p",
@@ -25,17 +25,24 @@ describe("provisionWorktree", () => {
     });
 
     expect(plan).toEqual({
-      path: "/srv/.mux/worktrees/p/ripley",
-      branch: "mux/p/ripley",
+      path: "/srv/.multiplexer/worktrees/p/ripley",
+      branch: "multiplexer/p/ripley",
     });
     expect(git.calls).toEqual([
-      ["worktree", "add", "-b", "mux/p/ripley", "/srv/.mux/worktrees/p/ripley", "main"],
+      [
+        "worktree",
+        "add",
+        "-b",
+        "multiplexer/p/ripley",
+        "/srv/.multiplexer/worktrees/p/ripley",
+        "main",
+      ],
     ]);
   });
 
   test("an existing worktree is re-synced against its base branch before the task", async () => {
     const git = new FakeGitExecutor();
-    const existing = "/srv/.mux/worktrees/p/ripley";
+    const existing = "/srv/.multiplexer/worktrees/p/ripley";
     const plan = await provisionWorktree(deps(git), {
       sessionKey: "p",
       crewName: "ripley",
@@ -50,11 +57,11 @@ describe("provisionWorktree", () => {
       ["-C", existing, "fetch", "origin", "main"],
       ["-C", existing, "rebase", "FETCH_HEAD"],
     ]);
-    expect(plan).toEqual({ path: existing, branch: "mux/p/ripley" });
+    expect(plan).toEqual({ path: existing, branch: "multiplexer/p/ripley" });
   });
 
   test("path and branch are stable and session-namespaced", () => {
-    expect(worktreePath("/srv", "p", "ripley")).toBe("/srv/.mux/worktrees/p/ripley");
-    expect(worktreeBranch("p", "ripley")).toBe("mux/p/ripley");
+    expect(worktreePath("/srv", "p", "ripley")).toBe("/srv/.multiplexer/worktrees/p/ripley");
+    expect(worktreeBranch("p", "ripley")).toBe("multiplexer/p/ripley");
   });
 });

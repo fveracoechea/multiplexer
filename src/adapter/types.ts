@@ -18,7 +18,7 @@ export interface LaunchSpec {
   readonly initialPrompt: string;
   /** MCP server name the CLI registers the connection under. */
   readonly mcpServerName: string;
-  /** Streamable-HTTP URL of the mux MCP server on localhost (per-crew). */
+  /** Streamable-HTTP URL of the multiplexer MCP server on localhost (per-crew). */
   readonly mcpUrl: string;
   /**
    * Worktree path the crew works in, or null for a read-only skill that

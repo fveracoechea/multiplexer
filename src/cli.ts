@@ -5,7 +5,7 @@ import { spawnCapture } from "./exec.ts";
 import { RealTmuxExecutor } from "./tmux/executor.ts";
 
 /**
- * `mux` CLI: the bootstrap entrypoint distributed via `bunx github:fveracoechea/multiplexer`
+ * `multiplexer` CLI: the bootstrap entrypoint distributed via `bunx github:fveracoechea/multiplexer`
  * (spec #22). Ensures the shared MCP server is running, creates the Orchestrator
  * window in the user's current tmux session, and launches the Orchestrator
  * agent pre-wired to the server.
@@ -17,8 +17,8 @@ async function main(): Promise<void> {
   const tmuxSession = await currentTmuxSession();
   // The session key is the tmux session name: the crew window and status-bar
   // alerts both target the tmux session by this name, so the two must match.
-  const sessionKey = Bun.env.MUX_SESSION_KEY ?? tmuxSession;
-  const agentType = Bun.env.MUX_AGENT_TYPE ?? "claude";
+  const sessionKey = Bun.env.MULTIPLEXER_SESSION_KEY ?? tmuxSession;
+  const agentType = Bun.env.MULTIPLEXER_AGENT_TYPE ?? "claude";
 
   const config: BootstrapConfig = { projectPwd, tmuxSession, sessionKey, agentType };
 

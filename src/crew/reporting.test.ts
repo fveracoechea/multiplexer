@@ -26,8 +26,8 @@ function makeConfig(sessionKey: string): MuxConfig {
   return {
     sessionKey,
     mcpUrl: "http://localhost:4123/mcp",
-    mcpServerName: "mux",
-    serverPwd: "/tmp/mux",
+    mcpServerName: "multiplexer",
+    serverPwd: "/tmp/multiplexer",
   };
 }
 
@@ -238,7 +238,7 @@ describe("report + crew_status tool surface", () => {
       "p",
       "-d",
       "5000",
-      "[mux] ripley milestone: halfway there",
+      "[multiplexer] ripley milestone: halfway there",
     ]);
 
     // blocked: alert fires.
@@ -247,7 +247,9 @@ describe("report + crew_status tool surface", () => {
       arguments: { summary: "stuck on tests", status: "blocked" },
     });
     expect(tmux.callsOf("display-message")).toHaveLength(2);
-    expect(tmux.callsOf("display-message")[1]?.at(-1)).toBe("[mux] ripley blocked: stuck on tests");
+    expect(tmux.callsOf("display-message")[1]?.at(-1)).toBe(
+      "[multiplexer] ripley blocked: stuck on tests",
+    );
 
     // done: alert fires.
     await ripley.callTool({
@@ -255,7 +257,7 @@ describe("report + crew_status tool surface", () => {
       arguments: { summary: "finished", status: "done" },
     });
     expect(tmux.callsOf("display-message")).toHaveLength(3);
-    expect(tmux.callsOf("display-message")[2]?.at(-1)).toBe("[mux] ripley done: finished");
+    expect(tmux.callsOf("display-message")[2]?.at(-1)).toBe("[multiplexer] ripley done: finished");
   });
 
   test("status-bar alerts are scoped by session key so a session only shows its own crew", async () => {
@@ -274,7 +276,14 @@ describe("report + crew_status tool surface", () => {
 
     // The alert targets session proj-a only; proj-b's status bar is untouched.
     expect(tmux.callsOf("display-message")).toEqual([
-      ["display-message", "-t", "proj-a", "-d", "5000", "[mux] ripley milestone: a-milestone"],
+      [
+        "display-message",
+        "-t",
+        "proj-a",
+        "-d",
+        "5000",
+        "[multiplexer] ripley milestone: a-milestone",
+      ],
     ]);
   });
 

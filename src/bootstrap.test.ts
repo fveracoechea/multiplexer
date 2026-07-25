@@ -13,14 +13,14 @@ import { FakeTmuxExecutor } from "./tmux/executor.ts";
  * the PID file lives in a real temp HOME so isOurServerAlive is exercised for
  * real (spec #22).
  */
-describe("mux bootstrap", () => {
+describe("multiplexer bootstrap", () => {
   let tmux: FakeTmuxExecutor;
   let home: string;
   let healthy: boolean;
 
   beforeEach(() => {
     tmux = new FakeTmuxExecutor();
-    home = mkdtempSync(join(tmpdir(), "mux-bootstrap-"));
+    home = mkdtempSync(join(tmpdir(), "multiplexer-bootstrap-"));
     process.env.HOME = home;
     healthy = false;
   });
@@ -98,13 +98,13 @@ describe("mux bootstrap", () => {
     const mcpIdx = respawn.indexOf("--mcp-config");
     const mcpConfig = JSON.parse(respawn[mcpIdx + 1] as string);
     expect(mcpConfig).toEqual({
-      mcpServers: { mux: { type: "http", url: "http://localhost:4123/mcp/myproj" } },
+      mcpServers: { multiplexer: { type: "http", url: "http://localhost:4123/mcp/myproj" } },
     });
   });
 
   test("a healthy server that is ours (PID file matches a live process) is reused, not restarted", async () => {
     // Write a PID file pointing at our own test process (which is alive).
-    mkdirSync(join(home, ".mux"), { recursive: true });
+    mkdirSync(join(home, ".multiplexer"), { recursive: true });
     writeFileSync(pidFilePath(), String(process.pid));
     healthy = true;
 
@@ -119,7 +119,7 @@ describe("mux bootstrap", () => {
 
   test("a healthy server whose PID file points at a dead process is restarted", async () => {
     // A stale PID file pointing at a dead process.
-    mkdirSync(join(home, ".mux"), { recursive: true });
+    mkdirSync(join(home, ".multiplexer"), { recursive: true });
     writeFileSync(pidFilePath(), "999999");
     healthy = true;
 
@@ -158,7 +158,7 @@ describe("mux bootstrap", () => {
     if (!respawn) throw new Error("expected respawn-pane");
     const mcpIdx = respawn.indexOf("--mcp-config");
     const mcpConfig = JSON.parse(respawn[mcpIdx + 1] as string);
-    expect(mcpConfig.mcpServers.mux.url).toBe("http://localhost:4123/mcp/custom-key");
+    expect(mcpConfig.mcpServers.multiplexer.url).toBe("http://localhost:4123/mcp/custom-key");
   });
 
   test("a custom port is honored for both discovery and the orchestrator's MCP URL", async () => {
@@ -168,7 +168,7 @@ describe("mux bootstrap", () => {
     if (!respawn) throw new Error("expected respawn-pane");
     const mcpIdx = respawn.indexOf("--mcp-config");
     const mcpConfig = JSON.parse(respawn[mcpIdx + 1] as string);
-    expect(mcpConfig.mcpServers.mux.url).toBe("http://localhost:9999/mcp/myproj");
+    expect(mcpConfig.mcpServers.multiplexer.url).toBe("http://localhost:9999/mcp/myproj");
   });
 
   test("the server start command runs from a dedicated, non-project state directory", async () => {
@@ -180,8 +180,8 @@ describe("mux bootstrap", () => {
     expect(cIdx).toBeGreaterThan(-1);
     const serverDir = start[cIdx + 1];
     if (!serverDir) throw new Error("expected -c value");
-    // The server's state dir is under ~/.mux/server, not the project dir.
-    expect(serverDir).toContain(".mux");
+    // The server's state dir is under ~/.multiplexer/server, not the project dir.
+    expect(serverDir).toContain(".multiplexer");
     expect(serverDir).not.toContain("project");
     expect(existsSync(serverDir)).toBe(true);
   });

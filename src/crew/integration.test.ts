@@ -22,7 +22,7 @@ function makeConfig(sessionKey: string): MuxConfig {
   return {
     sessionKey,
     mcpUrl: "http://localhost:4123/mcp",
-    mcpServerName: "mux",
+    mcpServerName: "multiplexer",
     serverPwd: "/srv",
     baseBranch: "main",
   };
@@ -78,8 +78,8 @@ describe("shared-issue integration branch (tool surface)", () => {
       "worktree",
       "add",
       "-b",
-      "mux/p/ripley",
-      "/srv/.mux/worktrees/p/ripley",
+      "multiplexer/p/ripley",
+      "/srv/.multiplexer/worktrees/p/ripley",
       "main",
     ]);
 
@@ -102,7 +102,7 @@ describe("shared-issue integration branch (tool surface)", () => {
       arguments: { name: "bishop", skill: "implement", scope: "part B", issue: 42 },
     });
 
-    // Exactly one `git branch mux/integration/p/42 main` - provisioned once, on sharing start.
+    // Exactly one `git branch multiplexer/integration/p/42 main` - provisioned once, on sharing start.
     expect(git.callsOf("branch")).toEqual([["branch", integrationBranchName("p", 42), "main"]]);
 
     // The 2nd crew's worktree branches from the integration branch.
@@ -110,8 +110,8 @@ describe("shared-issue integration branch (tool surface)", () => {
       "worktree",
       "add",
       "-b",
-      "mux/p/bishop",
-      "/srv/.mux/worktrees/p/bishop",
+      "multiplexer/p/bishop",
+      "/srv/.multiplexer/worktrees/p/bishop",
       integrationBranchName("p", 42),
     ]);
 

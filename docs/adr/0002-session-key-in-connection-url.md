@@ -1,6 +1,6 @@
 # The session key is carried in the MCP connection URL
 
-The mux MCP server is a singleton: one process serves every project session
+The multiplexer MCP server is a singleton: one process serves every project session
 concurrently. Each project session's crew, assignments, and events must be
 isolated by a session key stamped on every DB row and every tmux target. The
 question is how the server learns which session key a given connection belongs

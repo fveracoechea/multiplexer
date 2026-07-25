@@ -154,6 +154,6 @@ async function emitStatusBarAlert(
   status: ReportStatus,
   summary: string,
 ): Promise<void> {
-  const text = `[mux] ${crewName} ${status}: ${summary}`;
+  const text = `[multiplexer] ${crewName} ${status}: ${summary}`;
   await tmux.run(["display-message", "-t", sessionKey, "-d", "5000", text]);
 }

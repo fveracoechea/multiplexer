@@ -21,8 +21,8 @@ function makeConfig(sessionKey: string): MuxConfig {
   return {
     sessionKey,
     mcpUrl: "http://localhost:4123/mcp",
-    mcpServerName: "mux",
-    serverPwd: "/tmp/mux",
+    mcpServerName: "multiplexer",
+    serverPwd: "/tmp/multiplexer",
   };
 }
 

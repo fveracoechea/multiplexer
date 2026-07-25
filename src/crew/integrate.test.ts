@@ -3,8 +3,8 @@ import { FakeGitExecutor } from "../git/executor.ts";
 import { FakePrExecutor } from "../pr/executor.ts";
 import { DEFAULT_MERGE_RETRIES, directMerge, prMerge } from "./integrate.ts";
 
-const path = "/srv/.mux/worktrees/p/ripley";
-const branch = "mux/p/ripley";
+const path = "/srv/.multiplexer/worktrees/p/ripley";
+const branch = "multiplexer/p/ripley";
 const ctx = { worktreePath: path, branch, baseBranch: "main" };
 
 describe("directMerge", () => {
@@ -108,8 +108,8 @@ describe("directMerge", () => {
 });
 
 describe("prMerge", () => {
-  const path = "/srv/.mux/worktrees/p/ripley";
-  const branch = "mux/p/ripley";
+  const path = "/srv/.multiplexer/worktrees/p/ripley";
+  const branch = "multiplexer/p/ripley";
   const baseCtx = {
     worktreePath: path,
     branch,

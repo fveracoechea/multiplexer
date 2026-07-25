@@ -28,7 +28,7 @@ function makeConfig(sessionKey: string): MuxConfig {
   return {
     sessionKey,
     mcpUrl: "http://localhost:4123/mcp",
-    mcpServerName: "mux",
+    mcpServerName: "multiplexer",
     serverPwd: "/srv",
     baseBranch: "main",
     // Fast + deterministic in tests; production defaults to a real grace window.
@@ -211,7 +211,7 @@ describe("dismiss_crew tool surface", () => {
     });
 
     const before = crewRow("p", "ripley");
-    expect(before?.worktreePath).toBe("/srv/.mux/worktrees/p/ripley");
+    expect(before?.worktreePath).toBe("/srv/.multiplexer/worktrees/p/ripley");
 
     await orchestrator.callTool({
       name: "dismiss_crew",
@@ -220,8 +220,15 @@ describe("dismiss_crew tool surface", () => {
     await flush();
 
     expect(git.callsOf("worktree")).toEqual([
-      ["worktree", "add", "-b", "mux/p/ripley", "/srv/.mux/worktrees/p/ripley", "main"],
-      ["worktree", "remove", "/srv/.mux/worktrees/p/ripley", "--force"],
+      [
+        "worktree",
+        "add",
+        "-b",
+        "multiplexer/p/ripley",
+        "/srv/.multiplexer/worktrees/p/ripley",
+        "main",
+      ],
+      ["worktree", "remove", "/srv/.multiplexer/worktrees/p/ripley", "--force"],
     ]);
 
     const after = crewRow("p", "ripley");
@@ -245,8 +252,15 @@ describe("dismiss_crew tool surface", () => {
     );
     expect(result.dismissed[0]?.wiped).toBe(true);
     expect(git.callsOf("worktree")).toEqual([
-      ["worktree", "add", "-b", "mux/p/ripley", "/srv/.mux/worktrees/p/ripley", "main"],
-      ["worktree", "remove", "/srv/.mux/worktrees/p/ripley", "--force"],
+      [
+        "worktree",
+        "add",
+        "-b",
+        "multiplexer/p/ripley",
+        "/srv/.multiplexer/worktrees/p/ripley",
+        "main",
+      ],
+      ["worktree", "remove", "/srv/.multiplexer/worktrees/p/ripley", "--force"],
     ]);
   });
 
@@ -264,8 +278,8 @@ describe("dismiss_crew tool surface", () => {
     expect(git.callsOf("worktree")).toHaveLength(1); // only the initial `worktree add`
     const row = crewRow("p", "ripley");
     expect(row).toBeTruthy();
-    expect(row?.worktreePath).toBe("/srv/.mux/worktrees/p/ripley");
-    expect(row?.branch).toBe("mux/p/ripley");
+    expect(row?.worktreePath).toBe("/srv/.multiplexer/worktrees/p/ripley");
+    expect(row?.branch).toBe("multiplexer/p/ripley");
   });
 
   test("dismiss_crew() with no name dismisses every crew in the session", async () => {

@@ -8,10 +8,10 @@ describe("ClaudeAdapter", () => {
     crewName: "ripley",
     role: "You are a crew agent.",
     initialPrompt: "Use the research skill.\n\nsurvey the auth flow",
-    mcpServerName: "mux",
+    mcpServerName: "multiplexer",
     mcpUrl: "http://localhost:4123/mcp",
     worktreePath: null,
-    serverPwd: "/tmp/mux",
+    serverPwd: "/tmp/multiplexer",
     sessionKey: "proj-a",
   };
 
@@ -40,7 +40,7 @@ describe("ClaudeAdapter", () => {
     expect(idx).toBeGreaterThan(-1);
     // A URL entry with no `type` is a config error in Claude Code; type is set.
     expect(JSON.parse(argv[idx + 1] as string)).toEqual({
-      mcpServers: { mux: { type: "http", url: "http://localhost:4123/mcp" } },
+      mcpServers: { multiplexer: { type: "http", url: "http://localhost:4123/mcp" } },
     });
   });
 

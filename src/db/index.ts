@@ -9,7 +9,7 @@ export type MuxDb = ReturnType<typeof drizzle<typeof schema>>;
 const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../drizzle", import.meta.url));
 
 /**
- * Open a mux database and apply migrations.
+ * Open a multiplexer database and apply migrations.
  *
  * @param path `:memory:` in tests, a file under the server's PWD in production.
  */

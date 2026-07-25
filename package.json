@@ -7,7 +7,7 @@
   "bin": "src/cli.ts",
   "scripts": {
     "start": "bun run src/index.ts",
-    "mux": "bun run src/cli.ts",
+    "multiplexer": "bun run src/cli.ts",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint",
