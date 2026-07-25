@@ -1,20 +1,25 @@
 /**
  * Role prompt + task prompt construction.
  *
- * Roles (personas) are shipped as portable markdown in the full system; the
- * tracer bullet uses a minimal inline crew role so the spawn path is complete
- * end-to-end. Richer role content is layered in by the crew-role ticket without
- * changing this seam.
+ * Roles (personas) are shipped as portable markdown in `roles/` and loaded at
+ * runtime. Each role encodes the behavioral contract for one role (orchestrator
+ * or crew); the adapter injects it per CLI (Claude via `--append-system-prompt`,
+ * opencode as the agent file body). Keeping roles as markdown lets them be read
+ * and edited independently of the code that loads them.
  */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-/** Minimal crew persona injected via the adapter's system-prompt mechanism. */
+const CREW_ROLE_PATH = fileURLToPath(new URL("../roles/crew.md", import.meta.url));
+
+let cachedCrewRole: string | undefined;
+
+/** The crew role prompt, loaded from `roles/crew.md` (portable markdown, spec #24). */
 export function buildCrewRole(): string {
-  return [
-    "You are a crew agent in a tmux-based orchestration system.",
-    "You take one (skill, scope) assignment at a time from the Orchestrator.",
-    "Report progress and a terminal result through the mux MCP tools.",
-    "Never talk to the Engineer directly; the Orchestrator is your only channel.",
-  ].join(" ");
+  if (cachedCrewRole === undefined) {
+    cachedCrewRole = readFileSync(CREW_ROLE_PATH, "utf8");
+  }
+  return cachedCrewRole;
 }
 
 /** The task prompt handed to a freshly launched crew agent. */
