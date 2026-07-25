@@ -6,6 +6,7 @@ import { assignments, type Crew, crew } from "../db/schema.ts";
 import type { GitExecutor } from "../git/executor.ts";
 import { buildCrewRole, buildInitialPrompt } from "../roles.ts";
 import type { TmuxExecutor } from "../tmux/executor.ts";
+import { integrationBranchName, provisionIntegrationBranch, sharerCount } from "./integration.ts";
 import { findCrew } from "./queries.ts";
 import { provisionWorktree } from "./worktree.ts";
 
@@ -72,6 +73,39 @@ export async function assignCrew(deps: AssignDeps, input: AssignInput): Promise<
   return spawnCrew(deps, name, agentType, adapter, input);
 }
 
+/**
+ * Resolve the base branch a crew should land into, and provision the
+ * Orchestrator-owned integration branch when sharing starts (spec #20).
+ *
+ * A crew with no `issue` targets the default branch. A single crew with an
+ * issue also targets the default directly. The 2nd crew to carry a given
+ * issue kicks sharing in: the integration branch is provisioned locally from
+ * the default (once), and from then on every sharer's base is the integration
+ * branch - including the 1st crew, whose base is computed on the fly when it
+ * lands. The 1st crew's worktree was created from the default, which is
+ * identical to the freshly-provisioned integration branch, so no rebase is
+ * needed to retroactively retarget it.
+ */
+async function resolveBase(deps: AssignDeps, issue: number | undefined): Promise<string> {
+  const { db, git, config } = deps;
+  const defaultBranch = config.baseBranch ?? DEFAULT_BASE_BRANCH;
+  if (issue == null) return defaultBranch;
+
+  const count = sharerCount(db, config.sessionKey, issue);
+  if (count === 0) return defaultBranch;
+
+  // count >= 1: this is the 2nd+ assign carrying this issue -> sharing.
+  // Provision the integration branch exactly once, when sharing starts.
+  if (count === 1) {
+    await provisionIntegrationBranch(
+      git,
+      integrationBranchName(config.sessionKey, issue),
+      defaultBranch,
+    );
+  }
+  return integrationBranchName(config.sessionKey, issue);
+}
+
 async function spawnCrew(
   deps: AssignDeps,
   name: string,
@@ -84,9 +118,13 @@ async function spawnCrew(
   const isFirstCrew =
     db.select().from(crew).where(eq(crew.sessionKey, sessionKey)).all().length === 0;
 
+  // The base a file-mutating crew branches from and re-syncs against. For a
+  // shared issue this is the integration branch; otherwise the default.
+  const baseBranch = await resolveBase(deps, input.issue);
+
   // File-mutating skills get a dedicated worktree + branch; read-only skills
   // get none. A fresh crew's worktree is created here.
-  const worktree = await provisionWorktree(worktreeDeps(deps), {
+  const worktree = await provisionWorktree(worktreeDeps(deps, baseBranch), {
     sessionKey,
     crewName: name,
     skill: input.skill,
@@ -134,7 +172,8 @@ async function retaskCrew(
   // A read-only retask needs no worktree of its own, but a worktree the crew
   // already holds is left in place - untouched, not recreated - for whenever
   // it's next retasked with a file-mutating skill.
-  const worktree = await provisionWorktree(worktreeDeps(deps), {
+  const baseBranch = await resolveBase(deps, input.issue);
+  const worktree = await provisionWorktree(worktreeDeps(deps, baseBranch), {
     sessionKey,
     crewName: existingCrew.name,
     skill: input.skill,
@@ -207,11 +246,11 @@ function writeAssignment(
   };
 }
 
-function worktreeDeps(deps: AssignDeps) {
+function worktreeDeps(deps: AssignDeps, baseBranch: string) {
   return {
     git: deps.git,
     serverPwd: deps.config.serverPwd,
-    baseBranch: deps.config.baseBranch ?? DEFAULT_BASE_BRANCH,
+    baseBranch,
   };
 }
 
@@ -223,19 +262,24 @@ async function launchAgent(
   input: AssignInput,
 ): Promise<void> {
   const { config } = deps;
-  const launch = adapter.buildLaunchCommand({
+  const plan = adapter.prepare({
     crewName: target.crewName,
     role: buildCrewRole(),
     initialPrompt: buildInitialPrompt(input.skill, input.scope),
     mcpServerName: config.mcpServerName,
     // Per-crew endpoint so the server can attribute this crew's reports to it
     // without trusting a spoofable tool argument (ADR-0001).
-    mcpUrl: `${config.mcpUrl}/${target.crewName}`,
+    mcpUrl: `${config.mcpUrl}/${config.sessionKey}/${target.crewName}`,
+    worktreePath: target.worktreePath,
+    serverPwd: config.serverPwd,
+    sessionKey: config.sessionKey,
   });
-  // Launch the agent in its worktree when it has one, so file-mutating work
-  // happens on the isolated checkout.
-  const startDir = target.worktreePath ? ["-c", target.worktreePath] : [];
-  await deps.tmux.run(["respawn-pane", "-k", ...startDir, "-t", target.paneId, ...launch]);
+  // Launch in the adapter's chosen CWD when it picks one (e.g. opencode's
+  // per-crew config dir); otherwise fall back to the worktree for
+  // file-mutating skills, or the pane default for read-only skills.
+  const cwd = plan.cwd ?? target.worktreePath;
+  const startDir = cwd ? ["-c", cwd] : [];
+  await deps.tmux.run(["respawn-pane", "-k", ...startDir, "-t", target.paneId, ...plan.argv]);
 }
 
 /** Create (first assign) or split (subsequent) the crew window; return the new pane id. */

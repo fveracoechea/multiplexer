@@ -4,8 +4,10 @@
   "description": "A tmux-based orchestration tool/MCP server for coding agents.",
   "type": "module",
   "private": true,
+  "bin": "src/cli.ts",
   "scripts": {
     "start": "bun run src/index.ts",
+    "mux": "bun run src/cli.ts",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint",

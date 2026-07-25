@@ -9,6 +9,7 @@ import { crewDetail, crewOverview } from "./crew/status.ts";
 import { steerCrew } from "./crew/steer.ts";
 import type { MuxDb } from "./db/index.ts";
 import type { GitExecutor } from "./git/executor.ts";
+import type { PrExecutor } from "./pr/executor.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
 
 /** Everything an MCP server instance needs to serve one shared, session-aware surface. */
@@ -16,6 +17,7 @@ export interface MuxServerDeps {
   readonly db: MuxDb;
   readonly tmux: TmuxExecutor;
   readonly git: GitExecutor;
+  readonly pr: PrExecutor;
   readonly adapters: ReadonlyMap<string, Adapter>;
   readonly config: MuxConfig;
   /**
@@ -94,15 +96,21 @@ export function createMuxServer(deps: MuxServerDeps): McpServer {
         prUrl: z.string().optional().describe("URL of an opened pull request, if any."),
       },
     },
-    (args) => {
+    async (args) => {
       if (!deps.connectedCrew) {
         throw new Error("report is only callable by a crew agent");
       }
-      const event = appendReport(deps, { connectedCrew: deps.connectedCrew, ...args });
+      const { event, integrationPrUrl } = await appendReport(deps, {
+        connectedCrew: deps.connectedCrew,
+        ...args,
+      });
       return {
         content: [
           { type: "text", text: `Recorded ${event.status} report (event #${event.id}).` },
           { type: "text", text: JSON.stringify(event) },
+          ...(integrationPrUrl
+            ? [{ type: "text" as const, text: `Opened final integration PR: ${integrationPrUrl}` }]
+            : []),
         ],
       };
     },

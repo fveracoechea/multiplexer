@@ -17,6 +17,14 @@ export interface ServeOptions {
   readonly path?: string;
 }
 
+/** A parsed MCP connection: the session key and, for a crew connection, the crew name. */
+export interface ParsedConnection {
+  /** Project/session isolation key, carried in the URL (ADR-0002). */
+  readonly sessionKey: string;
+  /** Crew name for a crew connection; undefined for the orchestrator. */
+  readonly crewName?: string;
+}
+
 /**
  * Serve the mux MCP tool surface over streamable-HTTP on localhost using
  * web-standard `Request`/`Response`, wired to `Bun.serve`.
@@ -25,11 +33,14 @@ export interface ServeOptions {
  * injected dependencies, not in the MCP session, so each HTTP request is served
  * by a fresh `McpServer` + transport (the SDK forbids reusing a stateless
  * transport across requests). `createServer` mints that per-request server,
- * receiving the crew identity parsed from the connection URL (ADR-0001):
- * `/mcp` is the orchestrator's session connection, `/mcp/<crewName>` is a crew.
+ * receiving the session key and crew identity parsed from the connection URL
+ * (ADR-0001, ADR-0002): `/mcp/<sessionKey>` is an orchestrator connection,
+ * `/mcp/<sessionKey>/<crewName>` is a crew connection. The session key is
+ * carried in the URL so a single shared server serves every project session
+ * concurrently, each isolated by its own key (spec #22).
  */
 export async function startHttpServer(
-  createServer: (connectedCrew?: string) => McpServer,
+  createServer: (connection: ParsedConnection) => McpServer,
   options: ServeOptions = {},
 ): Promise<HttpServer> {
   const path = options.path ?? "/mcp";
@@ -39,12 +50,12 @@ export async function startHttpServer(
     hostname: "127.0.0.1",
     async fetch(request) {
       const url = new URL(request.url);
-      const connectedCrew = parseConnectedCrew(url.pathname, path);
-      if (connectedCrew === null) {
+      const connection = parseConnection(url.pathname, path);
+      if (connection === null) {
         return new Response("Not found", { status: 404 });
       }
 
-      const server = createServer(connectedCrew || undefined);
+      const server = createServer(connection);
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,
@@ -68,19 +79,29 @@ export async function startHttpServer(
 }
 
 /**
- * Resolve the connected crew from the request path (ADR-0001):
- *  - `<path>`             -> `""`   (orchestrator, session-scoped connection)
- *  - `<path>/<crewName>`  -> crew name
- *  - anything else        -> `null` (404)
+ * Resolve the connection from the request path (ADR-0001, ADR-0002):
+ *  - `<path>/<sessionKey>`            -> orchestrator for that session
+ *  - `<path>/<sessionKey>/<crewName>` -> crew for that session
+ *  - anything else                    -> `null` (404)
+ *
+ * The session key is carried in the URL so the shared server can attribute
+ * every row to the right project session without per-connection env vars.
  */
-function parseConnectedCrew(pathname: string, path: string): string | null {
-  if (pathname === path) {
-    return "";
-  }
+export function parseConnection(pathname: string, path: string): ParsedConnection | null {
   const prefix = `${path}/`;
-  if (pathname.startsWith(prefix)) {
-    const crewName = pathname.slice(prefix.length);
-    return crewName.includes("/") ? null : decodeURIComponent(crewName);
+  if (!pathname.startsWith(prefix)) return null;
+
+  const rest = pathname.slice(prefix.length);
+  if (rest.length === 0) return null;
+
+  const slash = rest.indexOf("/");
+  if (slash === -1) {
+    return { sessionKey: decodeURIComponent(rest) };
   }
-  return null;
+
+  const sessionKey = rest.slice(0, slash);
+  const crewName = rest.slice(slash + 1);
+  // Crew names can't contain a slash (a nested path would be a 404).
+  if (crewName.length === 0 || crewName.includes("/")) return null;
+  return { sessionKey: decodeURIComponent(sessionKey), crewName: decodeURIComponent(crewName) };
 }
