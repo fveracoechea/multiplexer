@@ -11,8 +11,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const CREW_ROLE_PATH = fileURLToPath(new URL("../roles/crew.md", import.meta.url));
+const ORCHESTRATOR_ROLE_PATH = fileURLToPath(new URL("../roles/orchestrator.md", import.meta.url));
 
 let cachedCrewRole: string | undefined;
+let cachedOrchestratorRole: string | undefined;
 
 /** The crew role prompt, loaded from `roles/crew.md` (portable markdown, spec #24). */
 export function buildCrewRole(): string {
@@ -20,6 +22,14 @@ export function buildCrewRole(): string {
     cachedCrewRole = readFileSync(CREW_ROLE_PATH, "utf8");
   }
   return cachedCrewRole;
+}
+
+/** The orchestrator role prompt, loaded from `roles/orchestrator.md` (portable markdown, spec #23). */
+export function buildOrchestratorRole(): string {
+  if (cachedOrchestratorRole === undefined) {
+    cachedOrchestratorRole = readFileSync(ORCHESTRATOR_ROLE_PATH, "utf8");
+  }
+  return cachedOrchestratorRole;
 }
 
 /** The task prompt handed to a freshly launched crew agent. */

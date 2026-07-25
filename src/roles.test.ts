@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { buildCrewRole, buildDismissPrompt, buildInitialPrompt } from "./roles.ts";
+import {
+  buildCrewRole,
+  buildDismissPrompt,
+  buildInitialPrompt,
+  buildOrchestratorRole,
+} from "./roles.ts";
 
 describe("crew role prompt", () => {
   const role = buildCrewRole();
@@ -50,5 +55,47 @@ describe("buildInitialPrompt", () => {
 describe("buildDismissPrompt", () => {
   test("tells the crew to wrap up and call report(done)", () => {
     expect(buildDismissPrompt()).toContain("report(done)");
+  });
+});
+
+describe("orchestrator role prompt", () => {
+  const role = buildOrchestratorRole();
+
+  test("is the portable markdown loaded from roles/orchestrator.md, not a stub", () => {
+    expect(role).toContain("# Orchestrator Role");
+    expect(role.length).toBeGreaterThan(500);
+  });
+
+  test("declares itself the single point of contact for the Engineer", () => {
+    expect(role).toMatch(/single point of contact/i);
+    expect(role).toMatch(/crew never talk to the Engineer/i);
+  });
+
+  test("encodes conditional decomposition: direct dispatch, in-context grill, never a decomposition crew", () => {
+    expect(role).toMatch(/directly/i);
+    expect(role).toMatch(/\/to-tickets/);
+    expect(role).toMatch(/\/to-spec/);
+    expect(role).toMatch(/never.*decomposition crew/i);
+  });
+
+  test("permits firing exploratory research/prototype crew mid-grill", () => {
+    expect(role).toMatch(/mid-grill/i);
+    expect(role).toMatch(/research|prototype/i);
+  });
+
+  test("encodes conversational steering: resolve name -> steer_crew, clarifying question on ambiguity", () => {
+    expect(role).toContain("steer_crew");
+    expect(role).toMatch(/ambiguous/i);
+    expect(role).toMatch(/clarifying question/i);
+  });
+
+  test("encodes pull-based: bounded crew_status digests, never raw pane scrollback", () => {
+    expect(role).toMatch(/pull-based/i);
+    expect(role).toMatch(/crew_status/);
+    expect(role).toMatch(/never.*raw pane scrollback/i);
+  });
+
+  test("never does the delegated work itself", () => {
+    expect(role).toMatch(/never do the delegated work yourself/i);
   });
 });

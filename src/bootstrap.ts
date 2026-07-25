@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Adapter } from "./adapter/types.ts";
 import { MCP_SERVER_NAME } from "./config.ts";
+import { buildOrchestratorRole } from "./roles.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
 
 /** The tmux session the shared server runs in, separate from any project. */
@@ -148,8 +149,8 @@ async function launchOrchestrator(
   ]);
   const paneId = created.stdout.trim();
 
-  // Launch the Orchestrator with the orchestrator role (minimal inline stub;
-  // the rich role ships in #23) and the MCP server wired to its session endpoint.
+  // Launch the Orchestrator with the orchestrator role (portable markdown,
+  // spec #23) and the MCP server wired to its session endpoint.
   const role = buildOrchestratorRole();
   const plan = adapter.prepare({
     crewName: "orchestrator",
@@ -174,18 +175,6 @@ async function launchOrchestrator(
 function writePidFile(): void {
   mkdirSync(join(process.env.HOME ?? "/tmp", ".mux"), { recursive: true });
   writeFileSync(pidFilePath(), String(process.pid));
-}
-
-/** Minimal orchestrator role; the rich role ships as portable markdown in #23. */
-export function buildOrchestratorRole(): string {
-  return [
-    "You are the Orchestrator in a tmux-based coding-agent orchestration system (mux).",
-    "You are the single point of contact for the Engineer.",
-    "Decompose intent into (skill, scope) assignments, dispatch them to named crew agents via the mux MCP tools,",
-    "steer crew as intent evolves, and relay back concise digests.",
-    "Never do the delegated work yourself; never let a crew agent talk to the Engineer.",
-    "You are pull-based: read bounded crew_status digests, never raw pane scrollback.",
-  ].join(" ");
 }
 
 /** Derive the session key from the project directory name (the default). */
