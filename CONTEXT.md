@@ -42,7 +42,7 @@ The deliberate, bounded end-of-task artifact a crew agent produces (status + sho
 
 ### Worktree
 
-A dedicated git worktree + branch given to each file-mutating crew agent so parallel work cannot collide. Read-only skills (research, review) need none. Integration happens by the crew agent opening a **PR** that closes a related issue - not by a bespoke merge engine.
+A dedicated git worktree + branch given to each file-mutating crew agent so parallel work cannot collide. Read-only skills (research, review) need none. Landing finished work is a direct `git merge` + push by default, or a **PR** that closes a related issue when the scope requests one - plain git either way, not a bespoke merge engine.
 
 ### mux CLI
 
