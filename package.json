@@ -1,6 +1,6 @@
 {
   "name": "multiplexer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A tmux-based orchestration tool/MCP server for coding agents.",
   "type": "module",
   "private": true,
