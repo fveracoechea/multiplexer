@@ -44,7 +44,9 @@ describe("OpencodeAdapter", () => {
     const idx = argv.indexOf("--agent");
     expect(idx).toBeGreaterThan(-1);
     expect(argv[idx + 1]).toBe("ripley");
-    expect(argv).toContain(baseSpec.initialPrompt);
+    const promptIdx = argv.indexOf("--prompt");
+    expect(promptIdx).toBeGreaterThan(-1);
+    expect(argv[promptIdx + 1]).toBe(baseSpec.initialPrompt);
   });
 
   test("writes a per-crew agent config file (frontmatter + body-as-prompt)", () => {

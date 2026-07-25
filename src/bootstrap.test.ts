@@ -69,7 +69,9 @@ describe("multiplexer bootstrap", () => {
     const [start] = tmux.callsOf("new-session");
     expect(start?.slice(0, 4)).toEqual(["new-session", "-d", "-s", SERVER_TMUX_SESSION]);
     expect(start).toContain("bun");
-    expect(start).toContain("src/index.ts");
+    // The server entrypoint is passed as an absolute path (resilient to CWD).
+    const entry = start?.find((a) => typeof a === "string" && a.endsWith("src/index.ts"));
+    expect(entry).toBeTruthy();
 
     // The Orchestrator window is created in the user's session.
     const [win] = tmux.callsOf("new-window");

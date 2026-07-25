@@ -37,7 +37,7 @@ export class OpencodeAdapter implements Adapter {
     writeFileSync(join(configDir, "opencode.json"), opencodeJson(spec.mcpServerName, spec.mcpUrl));
 
     return {
-      argv: ["opencode", "--agent", spec.crewName, spec.initialPrompt],
+      argv: ["opencode", "--agent", spec.crewName, "--prompt", spec.initialPrompt],
       cwd: configDir,
     };
   }

@@ -1,9 +1,20 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Adapter } from "./adapter/types.ts";
 import { MCP_SERVER_NAME } from "./config.ts";
 import { buildOrchestratorRole } from "./roles.ts";
 import type { TmuxExecutor } from "./tmux/executor.ts";
+
+/** The multiplexer package root (where src/ + node_modules/ live). */
+function packageRoot(): string {
+  return fileURLToPath(new URL("../", import.meta.url));
+}
+
+/** Absolute path to the server entrypoint (resilient to CWD). */
+function serverEntryPath(): string {
+  return join(packageRoot(), "src", "index.ts");
+}
 
 /** The tmux session the shared server runs in, separate from any project. */
 export const SERVER_TMUX_SESSION = "multiplexer-server";
@@ -108,8 +119,7 @@ async function startServerInTmux(tmux: TmuxExecutor): Promise<void> {
     "-c",
     statePath,
     "bun",
-    "run",
-    "src/index.ts",
+    serverEntryPath(),
   ]);
 }
 
