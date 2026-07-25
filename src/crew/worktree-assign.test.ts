@@ -7,6 +7,7 @@ import type { MuxConfig } from "../config.ts";
 import { createDb, type MuxDb } from "../db/index.ts";
 import { crew } from "../db/schema.ts";
 import { FakeGitExecutor } from "../git/executor.ts";
+import { FakePrExecutor } from "../pr/executor.ts";
 import { createMuxServer } from "../server.ts";
 import { FakeTmuxExecutor } from "../tmux/executor.ts";
 
@@ -28,6 +29,7 @@ describe("assign_crew worktree provisioning (tool surface)", () => {
       db,
       tmux,
       git,
+      pr: new FakePrExecutor(),
       adapters: new Map([["claude", new ClaudeAdapter()]]),
       config,
     });

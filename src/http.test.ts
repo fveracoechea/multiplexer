@@ -7,6 +7,7 @@ import { createDb } from "./db/index.ts";
 import { crew } from "./db/schema.ts";
 import { FakeGitExecutor } from "./git/executor.ts";
 import { type HttpServer, startHttpServer } from "./http.ts";
+import { FakePrExecutor } from "./pr/executor.ts";
 import { createMuxServer } from "./server.ts";
 import { FakeTmuxExecutor } from "./tmux/executor.ts";
 
@@ -28,9 +29,10 @@ describe("streamable-HTTP transport", () => {
       serverPwd: "/tmp/mux",
     };
     const git = new FakeGitExecutor();
+    const pr = new FakePrExecutor();
     const adapters = new Map([["claude", new ClaudeAdapter()]]);
     const createServer = (connectedCrew?: string) =>
-      createMuxServer({ db, tmux, git, adapters, config, connectedCrew });
+      createMuxServer({ db, tmux, git, pr, adapters, config, connectedCrew });
 
     http = await startHttpServer(createServer, { port: 0 });
     expect(http.url).toMatch(/^http:\/\/localhost:\d+$/);

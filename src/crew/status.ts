@@ -1,7 +1,8 @@
 import { desc, eq } from "drizzle-orm";
-import type { MuxConfig } from "../config.ts";
+import { DEFAULT_BASE_BRANCH, type MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
 import { crew, type Event, events } from "../db/schema.ts";
+import { baseForIssue } from "./integration.ts";
 import { findCrew, latestAssignment, latestEvent } from "./queries.ts";
 
 /** A crew detail view is capped to this many of the most recent events. */
@@ -32,6 +33,12 @@ export interface CrewDetail {
   readonly scope: string | null;
   readonly worktreePath: string | null;
   readonly branch: string | null;
+  /**
+   * The branch this crew should land into: the integration branch when its
+   * assignment shares an issue, else the default. Read by the crew agent to
+   * target its direct-merge or requested-PR landing (spec #20).
+   */
+  readonly baseBranch: string;
   readonly events: Event[];
 }
 
@@ -88,6 +95,9 @@ export function crewDetail(deps: StatusDeps, name: string): CrewDetail | null {
         .reverse()
     : [];
 
+  const defaultBranch = config.baseBranch ?? DEFAULT_BASE_BRANCH;
+  const baseBranch = baseForIssue(db, config.sessionKey, current?.issue, defaultBranch);
+
   return {
     name: crewRow.name,
     agentType: crewRow.agentType,
@@ -95,6 +105,7 @@ export function crewDetail(deps: StatusDeps, name: string): CrewDetail | null {
     scope: current?.scope ?? null,
     worktreePath: crewRow.worktreePath,
     branch: crewRow.branch,
+    baseBranch,
     events: recent,
   };
 }

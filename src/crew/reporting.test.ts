@@ -5,6 +5,7 @@ import { ClaudeAdapter } from "../adapter/claude.ts";
 import type { MuxConfig } from "../config.ts";
 import { createDb, type MuxDb } from "../db/index.ts";
 import { FakeGitExecutor } from "../git/executor.ts";
+import { FakePrExecutor } from "../pr/executor.ts";
 import { createMuxServer } from "../server.ts";
 import { FakeTmuxExecutor } from "../tmux/executor.ts";
 import { MAX_DETAIL_EVENTS } from "./status.ts";
@@ -34,11 +35,12 @@ describe("report + crew_status tool surface", () => {
   let db: MuxDb;
   let tmux: FakeTmuxExecutor;
   let git: FakeGitExecutor;
+  const pr = new FakePrExecutor();
   const adapters = new Map([["claude", new ClaudeAdapter()]]);
 
   /** Connect a client scoped as the orchestrator or as a specific crew. */
   async function connect(config: MuxConfig, connectedCrew?: string): Promise<Client> {
-    const server = createMuxServer({ db, tmux, git, adapters, config, connectedCrew });
+    const server = createMuxServer({ db, tmux, git, pr, adapters, config, connectedCrew });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);
     const client = new Client({ name: "test-client", version: "0.0.0" });

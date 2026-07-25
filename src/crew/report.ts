@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
-import type { MuxConfig } from "../config.ts";
+import { DEFAULT_BASE_BRANCH, type MuxConfig } from "../config.ts";
 import type { MuxDb } from "../db/index.ts";
 import { assignments, type Event, events } from "../db/schema.ts";
-import { ASSIGNMENT_STATUS, findCrew, latestAssignment } from "./queries.ts";
+import type { PrExecutor } from "../pr/executor.ts";
+import { allSharersDone, openIntegrationPr } from "./integration.ts";
+import { ASSIGNMENT_STATUS, findCrew, latestAssignment, latestEvent } from "./queries.ts";
 
 /** The status of a crew report. `blocked` is a hard halt; `done` is terminal. */
 export const REPORT_STATUSES = ["progress", "milestone", "blocked", "done"] as const;
@@ -11,6 +13,7 @@ export type ReportStatus = (typeof REPORT_STATUSES)[number];
 export interface ReportDeps {
   readonly db: MuxDb;
   readonly config: MuxConfig;
+  readonly pr: PrExecutor;
 }
 
 export interface ReportInput {
@@ -23,6 +26,16 @@ export interface ReportInput {
   readonly prUrl?: string;
 }
 
+export interface ReportResult {
+  /** The appended event (its `prUrl` carries the final integration PR URL when one was opened). */
+  readonly event: Event;
+  /**
+   * The URL of the final integration PR opened because this `done` report made
+   * every sharer of the assignment's issue done; undefined otherwise.
+   */
+  readonly integrationPrUrl?: string;
+}
+
 /**
  * Append a crew report as an event against the crew's current assignment.
  *
@@ -31,8 +44,13 @@ export interface ReportInput {
  * fresh event trail stays separate from the prior task's. A `blocked` report
  * additionally marks the assignment halted; only a subsequent `steer_crew`
  * resumes it (spec #17).
+ *
+ * A `done` report whose assignment carries a shared `issue` triggers the final
+ * integration PR when it makes every sharer done: one PR from the integration
+ * branch to the default branch, with `Closes #<issue>` (spec #20). The PR URL
+ * is recorded on the event so the Orchestrator reads it back via `crew_status`.
  */
-export function appendReport(deps: ReportDeps, input: ReportInput): Event {
+export async function appendReport(deps: ReportDeps, input: ReportInput): Promise<ReportResult> {
   const { db, config } = deps;
   const { sessionKey } = config;
 
@@ -46,8 +64,8 @@ export function appendReport(deps: ReportDeps, input: ReportInput): Event {
     throw new Error(`crew "${input.connectedCrew}" has no assignment to report against`);
   }
 
-  return db.transaction((tx) => {
-    const event = tx
+  const event = db.transaction((tx) => {
+    const inserted = tx
       .insert(events)
       .values({
         sessionKey,
@@ -67,6 +85,36 @@ export function appendReport(deps: ReportDeps, input: ReportInput): Event {
         .run();
     }
 
-    return event;
+    return inserted;
   });
+
+  // A `done` on a shared issue may be the last one: open the final integration
+  // PR when every sharer is now done. Best-effort - a failure to open the PR
+  // does not un-record the `done` report; the Orchestrator can retry.
+  if (input.status === "done" && current.issue != null) {
+    const everyoneDone = allSharersDone(
+      db,
+      sessionKey,
+      current.issue,
+      (aid) => latestEvent(db, aid)?.status === "done",
+    );
+    if (everyoneDone) {
+      const defaultBranch = config.baseBranch ?? DEFAULT_BASE_BRANCH;
+      const integrationPrUrl = await openIntegrationPr(
+        deps.pr,
+        sessionKey,
+        current.issue,
+        defaultBranch,
+      );
+      const updated = db
+        .update(events)
+        .set({ prUrl: integrationPrUrl })
+        .where(eq(events.id, event.id))
+        .returning()
+        .get();
+      return { event: updated, integrationPrUrl };
+    }
+  }
+
+  return { event };
 }

@@ -7,6 +7,7 @@ import { MCP_SERVER_NAME, type MuxConfig } from "./config.ts";
 import { createDb } from "./db/index.ts";
 import { RealGitExecutor } from "./git/executor.ts";
 import { startHttpServer } from "./http.ts";
+import { RealPrExecutor } from "./pr/executor.ts";
 import { createMuxServer } from "./server.ts";
 import { RealTmuxExecutor } from "./tmux/executor.ts";
 
@@ -35,13 +36,14 @@ async function main(): Promise<void> {
 
   const tmux = new RealTmuxExecutor();
   const git = new RealGitExecutor();
+  const pr = new RealPrExecutor();
   const adapters: Map<string, Adapter> = new Map([
     ["claude", new ClaudeAdapter()],
     ["opencode", new OpencodeAdapter()],
   ]);
 
   const http = await startHttpServer(
-    (connectedCrew) => createMuxServer({ db, tmux, git, adapters, config, connectedCrew }),
+    (connectedCrew) => createMuxServer({ db, tmux, git, pr, adapters, config, connectedCrew }),
     { port },
   );
   console.log(`mux MCP server listening on ${http.mcpUrl} (session: ${sessionKey})`);

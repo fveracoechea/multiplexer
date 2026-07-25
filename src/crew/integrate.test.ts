@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { FakeGitExecutor } from "../git/executor.ts";
-import { DEFAULT_MERGE_RETRIES, directMerge } from "./integrate.ts";
+import { FakePrExecutor } from "../pr/executor.ts";
+import { DEFAULT_MERGE_RETRIES, directMerge, prMerge } from "./integrate.ts";
 
 const path = "/srv/.mux/worktrees/p/ripley";
 const branch = "mux/p/ripley";
@@ -103,5 +104,102 @@ describe("directMerge", () => {
         call.some((arg) => arg.startsWith("user.name=") || arg.startsWith("user.email=")),
       ).toBe(false);
     }
+  });
+});
+
+describe("prMerge", () => {
+  const path = "/srv/.mux/worktrees/p/ripley";
+  const branch = "mux/p/ripley";
+  const baseCtx = {
+    worktreePath: path,
+    branch,
+    baseBranch: "main",
+    title: "Add the settings page",
+    body: "Implements the settings page per the spec.",
+  };
+
+  test("resyncs, pushes the crew branch, and opens a PR to the base branch", async () => {
+    const git = new FakeGitExecutor();
+    const pr = new FakePrExecutor((args) =>
+      args.includes("create")
+        ? { stdout: "https://github.com/org/repo/pull/7", exitCode: 0 }
+        : undefined,
+    );
+
+    const result = await prMerge({ git, pr }, baseCtx);
+
+    expect(result).toEqual({ status: "pr-opened", prUrl: "https://github.com/org/repo/pull/7" });
+    expect(git.calls).toEqual([
+      ["-C", path, "fetch", "origin", "main"],
+      ["-C", path, "rebase", "FETCH_HEAD"],
+      ["-C", path, "push", "origin", branch],
+    ]);
+    expect(pr.calls).toEqual([
+      [
+        "pr",
+        "create",
+        "--base",
+        "main",
+        "--head",
+        branch,
+        "--title",
+        baseCtx.title,
+        "--body",
+        baseCtx.body,
+      ],
+    ]);
+  });
+
+  test("appends `Closes #<n>` to the PR body only when an issue number is supplied", async () => {
+    const git = new FakeGitExecutor();
+    const pr = new FakePrExecutor();
+
+    await prMerge({ git, pr }, { ...baseCtx, issue: 42 });
+
+    const [createCall] = pr.calls;
+    if (!createCall) throw new Error("expected a pr create call");
+    const bodyIdx = createCall.indexOf("--body");
+    expect(createCall[bodyIdx + 1]).toBe(`${baseCtx.body}\n\nCloses #42`);
+  });
+
+  test("omits `Closes` entirely when no issue number is supplied", async () => {
+    const git = new FakeGitExecutor();
+    const pr = new FakePrExecutor();
+
+    await prMerge({ git, pr }, baseCtx);
+
+    const [createCall] = pr.calls;
+    if (!createCall) throw new Error("expected a pr create call");
+    const bodyIdx = createCall.indexOf("--body");
+    expect(createCall[bodyIdx + 1]).toBe(baseCtx.body);
+  });
+
+  test("a rebase conflict returns immediately, no push, no PR: same resolve-or-blocked step as direct-merge", async () => {
+    const git = new FakeGitExecutor((args) =>
+      args.includes("rebase") ? { exitCode: 1 } : undefined,
+    );
+    const pr = new FakePrExecutor();
+
+    const result = await prMerge({ git, pr }, baseCtx);
+
+    expect(result).toEqual({ status: "conflict" });
+    expect(git.calls).toEqual([
+      ["-C", path, "fetch", "origin", "main"],
+      ["-C", path, "rebase", "FETCH_HEAD"],
+    ]);
+    expect(pr.calls).toHaveLength(0);
+  });
+
+  test("does not retry on a push race (no retry cap on the PR path)", async () => {
+    const git = new FakeGitExecutor((args) =>
+      args.includes("push") ? { exitCode: 1 } : undefined,
+    );
+    const pr = new FakePrExecutor();
+
+    const result = await prMerge({ git, pr }, baseCtx);
+
+    expect(result).toEqual({ status: "pr-opened", prUrl: "" });
+    expect(git.calls.filter((c) => c.includes("push"))).toHaveLength(1);
+    expect(pr.calls).toHaveLength(1);
   });
 });

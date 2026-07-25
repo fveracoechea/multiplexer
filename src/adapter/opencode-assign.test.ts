@@ -9,6 +9,7 @@ import type { MuxConfig } from "../config.ts";
 import { createDb, type MuxDb } from "../db/index.ts";
 import { crew } from "../db/schema.ts";
 import { FakeGitExecutor } from "../git/executor.ts";
+import { FakePrExecutor } from "../pr/executor.ts";
 import { createMuxServer } from "../server.ts";
 import { FakeTmuxExecutor } from "../tmux/executor.ts";
 import { ClaudeAdapter } from "./claude.ts";
@@ -54,6 +55,7 @@ describe("assign_crew opencode adapter (tool surface)", () => {
         ["claude", new ClaudeAdapter()],
         ["opencode", new OpencodeAdapter()],
       ]),
+      pr: new FakePrExecutor(),
       config,
     });
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

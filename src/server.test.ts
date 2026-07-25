@@ -7,6 +7,7 @@ import type { MuxConfig } from "./config.ts";
 import { createDb, type MuxDb } from "./db/index.ts";
 import { assignments, crew } from "./db/schema.ts";
 import { FakeGitExecutor } from "./git/executor.ts";
+import { FakePrExecutor } from "./pr/executor.ts";
 import { createMuxServer } from "./server.ts";
 import { FakeTmuxExecutor } from "./tmux/executor.ts";
 
@@ -31,6 +32,7 @@ async function connect(deps: {
     db: deps.db,
     tmux: deps.tmux,
     git: new FakeGitExecutor(),
+    pr: new FakePrExecutor(),
     adapters: new Map([["claude", new ClaudeAdapter()]]),
     config: deps.config,
   });
