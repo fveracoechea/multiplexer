@@ -55,4 +55,12 @@ export interface Adapter {
    * side effect (opencode). The caller emits the argv into a tmux pane.
    */
   prepare(spec: LaunchSpec): LaunchPlan;
+  /**
+   * Heuristic idle/ready detection from captured pane text (spec #21). Neither
+   * interactive TUI exposes a machine-readable idle/busy signal, so steering
+   * leans on pane-text pattern matching. Each CLI has its own prompt/spinner
+   * shape; returns true when the pane looks ready for input (idle), false when
+   * it looks busy.
+   */
+  isIdle(paneText: string): boolean;
 }

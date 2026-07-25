@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { ClaudeAdapter } from "./adapter/claude.ts";
 import { OpencodeAdapter } from "./adapter/opencode.ts";
 import type { Adapter } from "./adapter/types.ts";
+import { pidFilePath } from "./bootstrap.ts";
 import { MCP_SERVER_NAME, type MuxConfig } from "./config.ts";
 import { createDb } from "./db/index.ts";
 import { RealGitExecutor } from "./git/executor.ts";
@@ -10,9 +11,6 @@ import { startHttpServer } from "./http.ts";
 import { RealPrExecutor } from "./pr/executor.ts";
 import { createMuxServer } from "./server.ts";
 import { RealTmuxExecutor } from "./tmux/executor.ts";
-
-/** The PID file the bootstrap reads to confirm the server is ours. */
-export const PID_FILE = join(process.env.HOME ?? "/tmp", ".mux", "server.pid");
 
 /**
  * Production entrypoint: boot the shared mux MCP server over streamable-HTTP.
@@ -35,8 +33,9 @@ async function main(): Promise<void> {
   const db = createDb(join(stateDir, "mux.db"));
 
   // Record our PID so the bootstrap can confirm a healthy server is ours.
-  mkdirSync(join(process.env.HOME ?? "/tmp", ".mux"), { recursive: true });
-  writeFileSync(PID_FILE, String(process.pid));
+  const pidFile = pidFilePath();
+  mkdirSync(join(pidFile, ".."), { recursive: true });
+  writeFileSync(pidFile, String(process.pid));
 
   const tmux = new RealTmuxExecutor();
   const git = new RealGitExecutor();

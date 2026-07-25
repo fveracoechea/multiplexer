@@ -32,4 +32,16 @@ export class ClaudeAdapter implements Adapter {
       ],
     };
   }
+
+  /**
+   * Claude Code's interactive TUI is idle when its prompt line is the last
+   * non-blank line. The prompt ends with `>` (the input cursor); a busy agent
+   * shows a spinner or working text instead. This is a heuristic - there is no
+   * machine-readable signal (docs/research/cli-adapter.md).
+   */
+  isIdle(paneText: string): boolean {
+    const lines = paneText.trimEnd().split("\n");
+    const last = lines[lines.length - 1]?.trim() ?? "";
+    return />\s*$/.test(last);
+  }
 }

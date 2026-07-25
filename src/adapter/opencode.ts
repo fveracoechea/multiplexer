@@ -41,6 +41,17 @@ export class OpencodeAdapter implements Adapter {
       cwd: configDir,
     };
   }
+
+  /**
+   * opencode's interactive TUI is idle when its prompt line is the last
+   * non-blank line. The prompt ends with `>` or `❯`; a busy agent shows a
+   * spinner or working text instead. Heuristic only (docs/research/cli-adapter.md).
+   */
+  isIdle(paneText: string): boolean {
+    const lines = paneText.trimEnd().split("\n");
+    const last = lines[lines.length - 1]?.trim() ?? "";
+    return /[>❯]\s*$/.test(last);
+  }
 }
 
 /**

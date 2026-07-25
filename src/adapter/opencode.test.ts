@@ -153,4 +153,11 @@ describe("OpencodeAdapter", () => {
       existsSync(join(opencodeConfigDir(serverPwd, "proj-b", "ripley"), "opencode.json")),
     ).toBe(true);
   });
+
+  test("isIdle detects opencode's prompt cursor as ready, spinner as busy", () => {
+    expect(adapter.isIdle("❯")).toBe(true);
+    expect(adapter.isIdle("some output\n> ")).toBe(true);
+    expect(adapter.isIdle("⠋ working...\n")).toBe(false);
+    expect(adapter.isIdle("")).toBe(false);
+  });
 });

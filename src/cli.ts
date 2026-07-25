@@ -1,6 +1,6 @@
 import { ClaudeAdapter } from "./adapter/claude.ts";
 import { OpencodeAdapter } from "./adapter/opencode.ts";
-import { type BootstrapConfig, bootstrap, sessionKeyFromProject } from "./bootstrap.ts";
+import { type BootstrapConfig, bootstrap } from "./bootstrap.ts";
 import { spawnCapture } from "./exec.ts";
 import { RealTmuxExecutor } from "./tmux/executor.ts";
 
@@ -15,7 +15,9 @@ import { RealTmuxExecutor } from "./tmux/executor.ts";
 async function main(): Promise<void> {
   const projectPwd = process.cwd();
   const tmuxSession = await currentTmuxSession();
-  const sessionKey = Bun.env.MUX_SESSION_KEY ?? sessionKeyFromProject(projectPwd);
+  // The session key is the tmux session name: the crew window and status-bar
+  // alerts both target the tmux session by this name, so the two must match.
+  const sessionKey = Bun.env.MUX_SESSION_KEY ?? tmuxSession;
   const agentType = Bun.env.MUX_AGENT_TYPE ?? "claude";
 
   const config: BootstrapConfig = { projectPwd, tmuxSession, sessionKey, agentType };

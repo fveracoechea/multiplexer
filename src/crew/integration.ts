@@ -24,13 +24,18 @@ export function integrationBranchName(sessionKey: string, issue: number): string
   return `mux/integration/${sessionKey}/${issue}`;
 }
 
-/** Count assignments in a session sharing the given issue. */
-export function sharerCount(db: MuxDb, sessionKey: string, issue: number): number {
+/** The assignments in a session sharing the given issue. */
+function sharers(db: MuxDb, sessionKey: string, issue: number) {
   return db
     .select()
     .from(assignments)
     .where(and(eq(assignments.sessionKey, sessionKey), eq(assignments.issue, issue)))
-    .all().length;
+    .all();
+}
+
+/** Count assignments in a session sharing the given issue. */
+export function sharerCount(db: MuxDb, sessionKey: string, issue: number): number {
+  return sharers(db, sessionKey, issue).length;
 }
 
 /**
@@ -80,14 +85,10 @@ export function allSharersDone(
   issue: number,
   isDone: (assignmentId: number) => boolean,
 ): boolean {
-  const sharers = db
-    .select()
-    .from(assignments)
-    .where(and(eq(assignments.sessionKey, sessionKey), eq(assignments.issue, issue)))
-    .all();
+  const rows = sharers(db, sessionKey, issue);
   // The final integration PR is only for shared issues (2+ sharers); a single
   // crew with an issue PRs directly to the default with `Closes #<n>`.
-  return sharers.length >= 2 && sharers.every((a) => isDone(a.id));
+  return rows.length >= 2 && rows.every((a) => isDone(a.id));
 }
 
 /**

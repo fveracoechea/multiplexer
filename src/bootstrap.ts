@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import type { Adapter } from "./adapter/types.ts";
 import { MCP_SERVER_NAME } from "./config.ts";
@@ -165,16 +165,6 @@ async function launchOrchestrator(
 
   const startDir = plan.cwd ? ["-c", plan.cwd] : ["-c", config.projectPwd];
   await deps.tmux.run(["respawn-pane", "-k", ...startDir, "-t", paneId, ...plan.argv]);
-
-  // Write the PID file after the server is up so subsequent bootstraps reuse it.
-  // (The server itself also writes it; this is a safety net for when the server
-  // was started in the background and the PID file isn't written yet.)
-  writePidFile();
-}
-
-function writePidFile(): void {
-  mkdirSync(join(process.env.HOME ?? "/tmp", ".mux"), { recursive: true });
-  writeFileSync(pidFilePath(), String(process.pid));
 }
 
 /** Derive the session key from the project directory name (the default). */

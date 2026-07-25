@@ -48,4 +48,11 @@ describe("ClaudeAdapter", () => {
     const { cwd } = adapter.prepare(spec);
     expect(cwd).toBeUndefined();
   });
+
+  test("isIdle detects Claude's prompt cursor as ready, spinner as busy", () => {
+    expect(adapter.isIdle(">")).toBe(true);
+    expect(adapter.isIdle("some output\n> ")).toBe(true);
+    expect(adapter.isIdle("⠋ working...\n")).toBe(false);
+    expect(adapter.isIdle("")).toBe(false);
+  });
 });
